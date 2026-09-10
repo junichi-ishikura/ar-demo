@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>地域のあるある展 ARデモ</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="sign-head">
+    <p class="eyebrow">課題研究 / 企画づくり</p>
+    <h1 id="site-title">地域のあるある展 ARデモ<span class="arrow">➜</span></h1>
+  </header>
+
+  <!-- 端末チェック -->
+  <section class="board" id="device-check">
+    <h2>端末チェック</h2>
+    <p class="device" id="device-msg">判定中…</p>
+    <div class="qr-box" id="qr-box" hidden>
+      <p><strong>スマートフォンで開いてください。</strong><br>このQRを読み取ると、このページが開きます。</p>
+      <canvas id="qr-canvas" width="256" height="256"></canvas>
+      <p class="url" id="qr-url"></p>
+    </div>
+  </section>
+
+  <!-- デモ一覧 -->
+  <ul class="demo-list">
+    <li><a class="demo-btn a" href="marker/">
+      <span class="badge">A</span>
+      <span><span class="title">パネルにかざすと 3D が出る</span><span class="sub">画像マーカー ＋ 3Dモデル ＋ 音声</span></span>
+      <span class="chev">›</span></a></li>
+    <li><a class="demo-btn b" href="marker/info.html">
+      <span class="badge">B</span>
+      <span><span class="title">同じパネルで「情報」が出る</span><span class="sub">文字 / いま⇄むかしの写真 / 動画</span></span>
+      <span class="chev">›</span></a></li>
+    <li><a class="demo-btn c" href="plane/">
+      <span class="badge">C</span>
+      <span><span class="title">床に等身大で置く</span><span class="sub">マーカー不要。床を映すと自動で出る</span></span>
+      <span class="chev">›</span></a></li>
+  </ul>
+
+  <!-- 使う前の注意 -->
+  <section class="warn">
+    <h2>体験する前に</h2>
+    <ul>
+      <li>「カメラを許可しますか？」と出たら <strong>許可</strong> を押す</li>
+      <li><strong>明るい場所</strong>で使う（暗い・反射・紙のテカりに弱い）</li>
+      <li><strong>音が出ます</strong>。マナーモードだと鳴らないことがあります</li>
+    </ul>
+  </section>
+
+  <!-- マーカー画像 -->
+  <section class="board">
+    <h2>マーカー画像</h2>
+    <p>紙が手元にないときは、別のスマホやPCの画面にこの画像を出して、それにかざしても動きます。</p>
+    <div class="marker-links">
+      <a href="assets/markers/marker-1.png"><img src="assets/markers/marker-1.png" alt="マーカー1">マーカー1</a>
+      <a href="assets/markers/marker-2.png"><img src="assets/markers/marker-2.png" alt="マーカー2">マーカー2</a>
+      <a href="assets/markers/marker-3.png"><img src="assets/markers/marker-3.png" alt="マーカー3">マーカー3</a>
+    </div>
+    <p style="margin-top:12px"><a href="print/">▶ 印刷用ページ（A4・マーカー＋QR）</a></p>
+  </section>
+
+  <p class="foot">中身を変えたいときは <code>config.js</code> を書き換える → 保存 → 再読み込み。<br>
+  詳しくは <a href="README.md">README</a></p>
+</div>
+
+<!-- QRコード生成（PC表示用。CDN・バージョン固定） -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
+<script>
+(function () {
+  document.title = CONFIG.siteTitle;
+  document.getElementById('site-title').firstChild.textContent = CONFIG.siteTitle;
+
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  var isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome/.test(ua);
+  var isChrome = /Chrome/.test(ua) && !/Edg|OPR|SamsungBrowser/.test(ua);
+  var secure = window.isSecureContext;
+
+  var msg = document.getElementById('device-msg');
+  var html = '';
+  if (!secure) {
+    html += '<span class="ng">✕ https ではありません。</span> カメラが使えないので、https のURL（GitHub Pages など）で開いてください。<br>';
+  }
+  if (isIOS) {
+    html += '<span class="ok">✔ iPhone / iPad</span><br>'
+      + 'デモA・Bは<strong>このページ内</strong>で動きます。<br>'
+      + 'デモCは <strong>Apple標準のARビューア（AR Quick Look）</strong>が開きます。'
+      + (isSafari ? '' : '<br><span class="ng">※ Safari で開いてください</span>（他のブラウザだとカメラが使えません）');
+  } else if (isAndroid) {
+    html += '<span class="ok">✔ Android</span><br>3つとも動きます。'
+      + (isChrome ? '' : '<br><span class="ng">※ Chrome で開いてください</span>');
+    if (!hasCamera) html += '<br><span class="ng">✕ カメラAPIが見つかりません</span>';
+  } else {
+    html += '<span class="ng">✕ PC のようです。</span> スマートフォンで開いてください。';
+    var box = document.getElementById('qr-box');
+    box.hidden = false;
+    var url = location.href.split('#')[0];
+    document.getElementById('qr-url').textContent = url;
+    try {
+      var qr = qrcode(0, 'M'); qr.addData(url); qr.make();
+      var canvas = document.getElementById('qr-canvas');
+      var cell = Math.floor(256 / (qr.getModuleCount() + 2));
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(cell, cell);
+      qr.renderTo2dContext(ctx, cell);
+    } catch (e) {
+      document.getElementById('qr-canvas').hidden = true;
+    }
+  }
+  msg.innerHTML = html;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>印刷用: マーカー＋QR（A4・3枚）</title>
+<link rel="stylesheet" href="../style.css">
+<script src="../config.js"></script>
+<style>
+  /* 画面表示 */
+  .toolbar { max-width: 640px; margin: 16px auto; padding: 0 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .sheet {
+    background: #fff; color: #141414;
+    width: 210mm; min-height: 297mm; margin: 16px auto; padding: 14mm 16mm;
+    border: 4px solid #141414; box-shadow: 6px 6px 0 #141414;
+    display: flex; flex-direction: column; gap: 8mm;
+    font-family: var(--font);
+  }
+  .sheet .head { background: #0b57a4; color: #fff; border: 3px solid #141414; padding: 6mm 8mm; }
+  .sheet .head .eyebrow { margin: 0; font-size: 11pt; letter-spacing: .15em; }
+  .sheet .head h1 { margin: 0; font-size: 22pt; color: #fff; }
+  .sheet .marker { width: 110mm; height: 110mm; margin: 0 auto; display: block; border: 1px solid #999; }
+  .sheet .marker-note { text-align: center; font-size: 10pt; color: #555; margin: -4mm 0 0; }
+  .sheet .row { display: grid; grid-template-columns: 52mm 1fr; gap: 8mm; align-items: start; }
+  .sheet .qr { width: 52mm; height: 52mm; border: 3px solid #141414; background: #fff; }
+  .sheet .qr canvas, .sheet .qr img { width: 100%; height: 100%; display: block; }
+  .sheet .url { font-size: 8.5pt; word-break: break-all; color: #555; margin: 2mm 0 0; }
+  .sheet .steps li { margin: 3mm 0; }
+  .sheet .steps li::before { width: 9mm; height: 9mm; }
+  .sheet .demo-name { font-size: 16pt; font-weight: 900; margin: 0 0 2mm; }
+  .sheet .demo-name .badge { display: inline-grid; place-items: center; width: 11mm; height: 11mm; border-radius: 50%; background: #141414; color: #f7c600; margin-right: 3mm; }
+  .sheet .foot { margin-top: auto; font-size: 9pt; color: #555; text-align: center; border-top: 2px dashed #999; padding-top: 3mm; }
+
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .toolbar, .no-print { display: none !important; }
+    .sheet { margin: 0; border: 0; box-shadow: none; width: 210mm; height: 297mm; min-height: 0; page-break-after: always; break-after: page; }
+    .sheet:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar no-print">
+  <a class="btn white" href="../">‹ もどる</a>
+  <button class="btn" onclick="window.print()">🖨 印刷する（A4・3枚）</button>
+  <span style="font-size:.9rem;color:var(--muted)">印刷ダイアログで「用紙: A4」「倍率: 100%」「背景のグラフィック: ON」にする</span>
+</div>
+
+<div id="sheets"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
+<script>
+(function () {
+  const site = CONFIG.siteTitle || '地域のあるある展';
+  // 3デモ分。デモA・Bはどのマーカーでも動く（同じ .mind に3枚入っている）。
+  // デモCはマーカー不要だが、統一感のため同じ紙にマーカーも載せる。
+  const SHEETS = [
+    { badge: 'A', name: 'パネルにかざすと 3D が出る', page: '../marker/', qr: '../assets/qr/marker.png', marker: '../assets/markers/marker-1.png',
+      steps: ['QRを読んで、ページを開く', '「はじめる」→ カメラを許可', '上のマーカーにスマホをかざす'],
+      note: 'マーカーは机に置くか、壁に貼る（config.js の placement）' },
+    { badge: 'B', name: '同じパネルで「情報」が出る', page: '../marker/info.html', qr: '../assets/qr/info.png', marker: '../assets/markers/marker-2.png',
+      steps: ['QRを読んで、ページを開く', '「はじめる」→ カメラを許可', '画面下のボタンで 文字/写真/動画 を切り替える'],
+      note: 'デモAのマーカーにかざしても動く（同じマーカー・違う中身）' },
+    { badge: 'C', name: '床に等身大で置く', page: '../plane/', qr: '../assets/qr/plane.png', marker: '../assets/markers/marker-3.png',
+      steps: ['QRを読んで、ページを開く', '説明を読んでから「ARで床に置く」', '床を映すと自動で出る（タップ不要）'],
+      note: 'デモCにマーカーは不要。この紙は「ここに来たらQRを読む」目印' },
+  ];
+
+  const root = document.getElementById('sheets');
+  SHEETS.forEach((s) => {
+    const url = new URL(s.page, location.href).href;
+    const el = document.createElement('section');
+    el.className = 'sheet';
+    el.innerHTML = `
+      <div class="head"><p class="eyebrow">AR デモ</p><h1>${site}</h1></div>
+      <img class="marker" src="${s.marker}" alt="マーカー">
+      <p class="marker-note">↑ このマーカーにかざす（11cm角）。折らない・光らせない・暗くしない</p>
+      <div class="row">
+        <div><div class="qr"><img src="${s.qr}" alt="QR"></div><p class="url">${url}</p></div>
+        <div>
+          <p class="demo-name"><span class="badge">${s.badge}</span>${s.name}</p>
+          <ol class="steps">${s.steps.map(t => `<li>${t}</li>`).join('')}</ol>
+          <p style="font-size:10pt;color:#555;margin:2mm 0 0">※ ${s.note}</p>
+        </div>
+      </div>
+      <p class="foot">iPhone は Safari、Android は Chrome で開く ／ カメラの許可が必要 ／ 明るい場所で</p>`;
+    root.appendChild(el);
+
+    // assets/qr/*.png が無ければ、いま開いているURLからその場で作る
+    const img = el.querySelector('.qr img');
+    img.addEventListener('error', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400; canvas.height = 400;
+      img.replaceWith(canvas);
+      try {
+        const qr = qrcode(0, 'M'); qr.addData(url); qr.make();
+        const cell = Math.floor(400 / (qr.getModuleCount() + 2));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 400, 400);
+        ctx.translate(cell, cell);
+        qr.renderTo2dContext(ctx, cell);
+      } catch (e) { console.warn('QR生成に失敗', e); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "webar-demo",
+  "private": true,
+  "description": "地域のあるある展 WebARデモ（静的サイト。npm はマーカー/QR/動画の生成スクリプト用）",
+  "type": "module",
+  "scripts": {
+    "markers": "node tools/make-markers.mjs",
+    "qr": "node tools/make-qr.mjs",
+    "video": "node tools/make-video.mjs",
+    "images": "node tools/make-images.mjs",
+    "serve": "npx --yes serve ."
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>デモB: 同じパネルで情報が出る</title>
+<link rel="stylesheet" href="../style.css">
+<script src="../config.js"></script>
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="ar-common.js"></script>
+</head>
+<body class="ar">
+
+<div class="gate" id="gate">
+  <div class="board">
+    <h2>デモB</h2>
+    <p style="font-size:1.25rem;font-weight:800;margin:6px 0 10px">デモAと同じパネルで「情報」が出る</p>
+    <ul>
+      <li>次の画面で <strong>カメラを許可</strong> してください</li>
+      <li>画面下のボタンで <strong>文字 / 写真 / 動画</strong> を切り替えられます</li>
+      <li>写真は <strong>タップ</strong> すると「いま ⇄ むかし」が入れ替わります</li>
+    </ul>
+  </div>
+  <button class="btn red block" id="start-btn">はじめる</button>
+  <p style="text-align:center;margin-top:16px"><a href="../">‹ トップにもどる</a></p>
+</div>
+
+<div class="hud-top">
+  <a class="btn white back" href="../">‹ もどる</a>
+  <span class="name">デモB　情報レイヤー</span>
+</div>
+<div class="hud-bottom">
+  <div class="status" id="status">読み込み中…</div>
+  <div class="caption" id="caption"></div>
+  <div class="switcher">
+    <button class="btn yellow" data-mode="text" aria-pressed="true">文字</button>
+    <button class="btn yellow" data-mode="photo" aria-pressed="false">写真</button>
+    <button class="btn yellow" data-mode="video" aria-pressed="false">動画</button>
+  </div>
+</div>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; maxTrack: 1; filterMinCF: 0.0001; filterBeta: 0.001"
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
+  <a-assets>
+    <img id="photo-now" src="" crossorigin="anonymous">
+    <img id="photo-old" src="" crossorigin="anonymous">
+    <!-- iOS でマーカー上再生するには playsinline と muted が必須 -->
+    <video id="vid" src="" playsinline webkit-playsinline muted loop preload="auto" crossorigin="anonymous"></video>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false"
+            cursor="fuse: false; rayOrigin: mouse;"
+            raycaster="far: 10000; objects: .clickable"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex: 0"></a-entity>
+  <a-entity mindar-image-target="targetIndex: 1"></a-entity>
+  <a-entity mindar-image-target="targetIndex: 2"></a-entity>
+</a-scene>
+
+<script>
+(function () {
+  const C = CONFIG.infoDemo;
+  document.getElementById('caption').textContent = C.caption || '';
+
+  document.getElementById('photo-now').src = C.photoNow;
+  document.getElementById('photo-old').src = C.photoOld;
+
+  const video = document.getElementById('vid');
+  let videoOK = false;        // 動画ファイルが使えるか（無ければパラパラ表示）
+  let mode = 'text';
+  const groups = [];           // 各マーカー上の { text, photo, video, slide } 
+  let slideTimer = null;
+  let slideIndex = 0;
+  let fallbackImgs = (C.videoFallbackImages || []).slice();
+
+  // 動画ファイルの有無を確認（無いときはパラパラ表示に切り替える）
+  fetch(C.video, { method: 'HEAD' }).then(r => {
+    if (r.ok && /video/.test(r.headers.get('content-type') || '')) { videoOK = true; video.src = C.video; }
+  }).catch(() => {}).finally(() => {
+    if (!videoOK) console.log('動画が無いので、パラパラ表示で代用します:', fallbackImgs);
+  });
+  video.addEventListener('error', () => { videoOK = false; });
+
+  AR.attachToAllTargets((target) => {
+    const g = { target };
+
+    // [文字] 回覧板風テキストパネル（マーカーに重ねる）
+    g.text = document.createElement('a-plane');
+    g.text.setAttribute('width', '1.1'); g.text.setAttribute('height', '0.8');
+    g.text.setAttribute('position', '0 0 0.01');
+    g.text.setAttribute('text-board', { text: C.text.body, title: C.text.title, style: 'panel', width: 1100, height: 800, fontSize: 70 });
+    g.text.setAttribute('animation__in', 'property: scale; from: 0.6 0.6 0.6; to: 1 1 1; dur: 300; easing: easeOutBack; startEvents: show');
+    target.appendChild(g.text);
+
+    // [写真] いま ⇄ むかし（タップで入れ替え）
+    g.photo = document.createElement('a-entity');
+    g.photoImg = document.createElement('a-image');
+    g.photoImg.setAttribute('src', '#photo-now');
+    g.photoImg.setAttribute('width', '1.1'); g.photoImg.setAttribute('height', '0.825');
+    g.photoImg.setAttribute('position', '0 0.06 0.01');
+    g.photoImg.setAttribute('class', 'clickable');
+    g.photoLabel = document.createElement('a-plane');
+    g.photoLabel.setAttribute('width', '1.1'); g.photoLabel.setAttribute('height', '0.16');
+    g.photoLabel.setAttribute('position', '0 -0.44 0.012');
+    g.photoLabel.setAttribute('text-board', { text: C.photoLabelNow + '　▶ タップで切り替え', style: 'label', width: 1100, height: 160, fontSize: 60 });
+    g.old = false;
+    g.photoImg.addEventListener('click', () => {
+      g.old = !g.old;
+      g.photoImg.setAttribute('src', g.old ? '#photo-old' : '#photo-now');
+      g.photoLabel.setAttribute('text-board', 'text', (g.old ? C.photoLabelOld : C.photoLabelNow) + '　▶ タップで切り替え');
+    });
+    g.photo.appendChild(g.photoImg); g.photo.appendChild(g.photoLabel);
+    target.appendChild(g.photo);
+
+    // [動画] マーカーの上で再生（音なし）
+    g.video = document.createElement('a-video');
+    g.video.setAttribute('src', '#vid');
+    g.video.setAttribute('width', '1.1'); g.video.setAttribute('height', '0.62');
+    g.video.setAttribute('position', '0 0 0.01');
+    target.appendChild(g.video);
+    // 動画が無いときのパラパラ表示
+    g.slide = document.createElement('a-image');
+    g.slide.setAttribute('width', '1.1'); g.slide.setAttribute('height', '0.825');
+    g.slide.setAttribute('position', '0 0 0.01');
+    if (fallbackImgs[0]) g.slide.setAttribute('src', fallbackImgs[0]);
+    target.appendChild(g.slide);
+
+    groups.push(g);
+    applyMode();
+  }, {
+    onFound() { applyMode(); groups.forEach(g => g.text.emit('show')); },
+    onLost()  { stopVideo(); },
+  });
+
+  function startVideo() {
+    if (videoOK) { video.currentTime = 0; video.play().catch(() => {}); return; }
+    // パラパラ表示
+    if (slideTimer || !fallbackImgs.length) return;
+    slideIndex = 0;
+    slideTimer = setInterval(() => {
+      slideIndex = (slideIndex + 1) % fallbackImgs.length;
+      groups.forEach(g => g.slide.setAttribute('src', fallbackImgs[slideIndex]));
+    }, (Number(C.videoFallbackInterval) || 1.5) * 1000);
+  }
+  function stopVideo() {
+    try { video.pause(); } catch (e) {}
+    if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+  }
+
+  function applyMode() {
+    groups.forEach(g => {
+      g.text.setAttribute('visible', mode === 'text');
+      g.photo.setAttribute('visible', mode === 'photo');
+      g.video.setAttribute('visible', mode === 'video' && videoOK);
+      g.slide.setAttribute('visible', mode === 'video' && !videoOK);
+      // 見えていないものはタップに反応させない
+      g.photoImg.setAttribute('class', mode === 'photo' ? 'clickable' : '');
+    });
+    if (mode === 'video' && AR.found) startVideo(); else stopVideo();
+  }
+
+  document.querySelectorAll('.switcher [data-mode]').forEach(b => {
+    b.addEventListener('click', () => {
+      mode = b.dataset.mode;
+      document.querySelectorAll('.switcher [data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      applyMode();
+    });
+  });
+
+  // 動画の解錠も「はじめる」タップの中で行う（muted なので不要なことが多いが念のため）
+  AR.setupGate({ audios: [video] });
+})();
+</script>
+</body>
+</html>

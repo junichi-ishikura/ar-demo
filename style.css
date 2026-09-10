@@ -1,0 +1,259 @@
+/* =============================================================
+   地域のあるある展 WebARデモ  共通スタイル
+   モチーフ: まちの案内標識・注意看板・回覧板
+   方針: 高コントラスト / 大きい文字 / 指で押せる大きさ / 片手縦持ち
+   ============================================================= */
+
+:root {
+  --ink: #141414;          /* 文字・枠線（標識の黒） */
+  --paper: #fff9e6;        /* 紙・掲示板の生成り色 */
+  --paper-2: #ffffff;
+  --sign-blue: #0b57a4;    /* 案内標識の青 */
+  --sign-green: #1f7a3f;   /* 高速道路標識の緑 */
+  --warn-yellow: #f7c600;  /* 注意看板の黄 */
+  --alert-red: #d0342c;    /* 回覧板・禁止の赤 */
+  --muted: #5a5a5a;
+  --tap: 64px;             /* 押せるものの最小高さ */
+  --radius: 6px;
+  --shadow: 6px 6px 0 var(--ink);
+  --font: "BIZ UDPGothic", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP", "Yu Gothic", Meiryo, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+  /* 掲示板っぽい方眼 */
+  background-image:
+    linear-gradient(rgba(20,20,20,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,20,20,.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+a { color: var(--sign-blue); }
+img { max-width: 100%; height: auto; display: block; }
+h1, h2, h3 { line-height: 1.3; margin: 0 0 .5em; font-weight: 800; }
+p { margin: 0 0 1em; }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; background: #fff; padding: .1em .35em; border: 1px solid var(--ink); border-radius: 3px; }
+
+.wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; }
+
+/* ---------- 案内標識風ヘッダー ---------- */
+.sign-head {
+  background: var(--sign-blue);
+  color: #fff;
+  border: 4px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin: 16px 0 24px;
+}
+.sign-head .eyebrow { font-size: .9rem; letter-spacing: .15em; opacity: .9; margin: 0 0 4px; }
+.sign-head h1 { font-size: 1.8rem; margin: 0; color: #fff; }
+.sign-head .arrow { font-size: 1.6rem; margin-left: .25em; }
+
+/* ---------- 注意看板（黄黒ストライプ） ---------- */
+.warn {
+  background: var(--warn-yellow);
+  border: 4px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px 14px 18px;
+  margin: 0 0 24px;
+  position: relative;
+  box-shadow: var(--shadow);
+}
+.warn::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0; width: 12px;
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 10px, var(--warn-yellow) 10px 20px);
+  border-right: 4px solid var(--ink);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.warn h2 { font-size: 1.1rem; margin: 0 0 6px; padding-left: 10px; }
+.warn ul { margin: 0; padding-left: 32px; }
+.warn li { margin: 2px 0; font-weight: 700; }
+
+/* ---------- 回覧板風パネル ---------- */
+.board {
+  background: var(--paper-2);
+  border: 4px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin: 0 0 24px;
+  box-shadow: var(--shadow);
+}
+.board h2 {
+  font-size: 1.15rem;
+  display: inline-block;
+  background: var(--alert-red);
+  color: #fff;
+  padding: 2px 12px;
+  margin: -4px 0 12px -4px;
+  transform: rotate(-1.5deg);
+}
+.board ul { padding-left: 1.3em; margin: 0; }
+.board li { margin: .3em 0; }
+
+/* ---------- デモへの大きなリンク（標識ボタン） ---------- */
+.demo-list { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 16px; }
+.demo-btn {
+  display: grid;
+  grid-template-columns: 64px 1fr 32px;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: #fff;
+  border: 4px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform .08s;
+}
+.demo-btn:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 var(--ink); }
+.demo-btn.a { background: var(--sign-green); }
+.demo-btn.b { background: var(--sign-blue); }
+.demo-btn.c { background: var(--alert-red); }
+.demo-btn .badge {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #fff; color: var(--ink);
+  display: grid; place-items: center;
+  font-size: 1.8rem; font-weight: 900;
+  border: 3px solid var(--ink);
+}
+.demo-btn .title { font-size: 1.25rem; font-weight: 800; display: block; }
+.demo-btn .sub { font-size: .9rem; opacity: .95; display: block; }
+.demo-btn .chev { font-size: 1.8rem; font-weight: 900; text-align: right; }
+
+/* ---------- 汎用ボタン ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4em;
+  min-height: var(--tap); padding: 12px 22px;
+  font: inherit; font-size: 1.2rem; font-weight: 800;
+  color: #fff; background: var(--sign-blue);
+  border: 4px solid var(--ink); border-radius: var(--radius);
+  box-shadow: var(--shadow); text-decoration: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: translate(4px,4px); box-shadow: 2px 2px 0 var(--ink); }
+.btn.yellow { background: var(--warn-yellow); color: var(--ink); }
+.btn.red { background: var(--alert-red); }
+.btn.green { background: var(--sign-green); }
+.btn.white { background: #fff; color: var(--ink); }
+.btn.block { display: flex; width: 100%; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--warn-yellow); }
+
+/* ---------- 端末チェック ---------- */
+.device { font-weight: 700; }
+.device .ok { color: var(--sign-green); }
+.device .ng { color: var(--alert-red); }
+.qr-box { text-align: center; }
+.qr-box canvas, .qr-box img { margin: 8px auto; border: 4px solid var(--ink); background: #fff; }
+.qr-box .url { font-size: .85rem; word-break: break-all; color: var(--muted); }
+
+.marker-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.marker-links a { display: block; border: 3px solid var(--ink); background: #fff; padding: 4px; text-align: center; font-size: .85rem; font-weight: 700; }
+
+.foot { font-size: .85rem; color: var(--muted); text-align: center; margin-top: 32px; }
+.foot a { color: inherit; }
+
+/* =============================================================
+   ARページ（デモA・B）用オーバーレイ
+   ============================================================= */
+body.ar { background: #000; overflow: hidden; height: 100dvh; }
+body.ar a-scene { position: fixed; inset: 0; }
+
+/* はじめる画面（音声解錠 + カメラ許可の心構え） */
+.gate {
+  position: fixed; inset: 0; z-index: 50;
+  background: var(--paper);
+  background-image:
+    linear-gradient(rgba(20,20,20,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,20,20,.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 20px; overflow: auto;
+}
+.gate .board { margin-bottom: 20px; }
+.gate .btn { font-size: 1.5rem; min-height: 80px; }
+.gate[hidden] { display: none; }
+
+/* 画面上部のタイトル帯 */
+.hud-top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+  padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+  pointer-events: none;
+}
+.hud-top .back {
+  pointer-events: auto;
+  min-height: 48px; padding: 6px 14px; font-size: 1rem;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.hud-top .name {
+  background: var(--sign-blue); color: #fff; font-weight: 800;
+  border: 3px solid var(--ink); padding: 8px 12px; border-radius: var(--radius);
+  box-shadow: 3px 3px 0 var(--ink); font-size: 1rem;
+}
+
+/* 画面下部: 状態表示・キャプション・切替ボタン */
+.hud-bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+  display: grid; gap: 10px; pointer-events: none;
+}
+.hud-bottom > * { pointer-events: auto; }
+.status {
+  text-align: center; font-weight: 800; font-size: 1.15rem;
+  background: var(--warn-yellow); color: var(--ink);
+  border: 4px solid var(--ink); border-radius: var(--radius);
+  padding: 10px 14px; box-shadow: var(--shadow);
+}
+.status.found { background: var(--sign-green); color: #fff; animation: pop .35s ease-out; }
+.status.error { background: var(--alert-red); color: #fff; }
+@keyframes pop { 0% { transform: scale(.9); } 60% { transform: scale(1.05); } 100% { transform: scale(1); } }
+.caption {
+  background: #fff; border: 4px solid var(--ink); border-radius: var(--radius);
+  padding: 10px 14px; font-weight: 700; font-size: 1.05rem; text-align: center;
+  box-shadow: var(--shadow);
+}
+.switcher { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.switcher .btn { font-size: 1rem; padding: 8px 4px; min-height: 60px; box-shadow: 3px 3px 0 var(--ink); }
+
+/* MindAR が自分で出す UI は使わない（uiLoading/uiScanning/uiError: no） */
+.mindar-ui-overlay { display: none !important; }
+
+/* =============================================================
+   平面配置ページ（デモC）
+   ============================================================= */
+model-viewer {
+  width: 100%; height: 62vh; min-height: 360px;
+  background: #e9eef5;
+  border: 4px solid var(--ink); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 20px;
+}
+model-viewer .ar-button {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  min-height: var(--tap); padding: 10px 26px;
+  font: inherit; font-size: 1.3rem; font-weight: 900;
+  background: var(--alert-red); color: #fff;
+  border: 4px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow);
+  cursor: pointer; white-space: nowrap;
+}
+model-viewer .ar-button:active { transform: translateX(-50%) translate(4px,4px); box-shadow: 2px 2px 0 var(--ink); }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; margin: 8px 0; }
+.steps li::before {
+  content: counter(s); width: 36px; height: 36px; border-radius: 50%;
+  background: var(--ink); color: var(--warn-yellow); font-weight: 900;
+  display: grid; place-items: center;
+}
+
+@media (min-width: 720px) {
+  body { font-size: 19px; }
+}
