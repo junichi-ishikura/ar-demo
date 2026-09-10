@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>デモC: 床に等身大で置く</title>
+<link rel="stylesheet" href="../style.css">
+<script src="../config.js"></script>
+<!-- model-viewer 4.3.1（バージョン固定。latest にしない） -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud-top" style="position:static;padding:12px 0 0">
+    <a class="btn white back" href="../">‹ もどる</a>
+    <span class="name">デモC　床に置く</span>
+  </div>
+
+  <header class="sign-head">
+    <p class="eyebrow">平面配置 AR（マーカー不要）</p>
+    <h1 id="title">駅前にこれが建ったら</h1>
+  </header>
+
+  <!-- ARに入ると画面がネイティブビューアに切り替わり、こちらのUIは出せない。
+       だから伝えたいことは「入る前」にここで伝える。 -->
+  <section class="warn">
+    <h2>ARに入る前に読んでください</h2>
+    <ul>
+      <li>「ARで床に置く」を押すと、<strong>スマホ標準のARビューア</strong>に切り替わります（この画面は消えます）</li>
+      <li>床を映して少し動かすと、<strong>床が検出された瞬間に自動で出ます</strong>。タップして置く必要はありません</li>
+      <li>出てくる大きさは <strong>実物大（固定）</strong>。近づいたり離れたりして見てください</li>
+      <li>戻るときは、ビューアの「×」や「閉じる」を押します</li>
+    </ul>
+  </section>
+
+  <model-viewer id="mv"
+    src="" ios-src=""
+    alt="床に置く3Dモデル"
+    ar ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed" ar-placement="floor"
+    camera-controls touch-action="pan-y"
+    shadow-intensity="1" exposure="1"
+    loading="eager" reveal="auto">
+    <button slot="ar-button" class="ar-button" id="ar-btn">▶ ARで床に置く</button>
+    <div slot="poster" id="poster-slot"></div>
+  </model-viewer>
+  <p class="device" id="ar-note"></p>
+
+  <section class="board">
+    <h2>これは何？</h2>
+    <p id="desc"></p>
+    <p style="margin:0;color:var(--muted)">高さ: <strong id="height"></strong>　/　モデル: <code id="model-name"></code></p>
+  </section>
+
+  <section class="board">
+    <h2>デモAとのちがい</h2>
+    <ul>
+      <li><strong>紙(マーカー)がいらない</strong>。代わりに「床」を使う</li>
+      <li>でも、<strong>「どこの床か」は分かっていない</strong>。校庭でも駅前でも、同じものが出る</li>
+      <li>「この場所でこれを出す」は、<strong>その場所に貼ったQRコード</strong>で決めている</li>
+      <li>ARの中では説明文やボタンを重ねられない → 説明はこのページで済ませる</li>
+      <li>来場者は指でモデルを動かせてしまう（止められない）</li>
+    </ul>
+  </section>
+
+  <section class="board">
+    <h2>iPhone で見る人へ</h2>
+    <p>Safari で開いてください。「ARで床に置く」で <strong>AR Quick Look</strong> が開きます。
+    モデルが真っ白・真っ黒に見える場合は、iPhone用ファイル(usdz)の変換に失敗しています（README「[人手] USDZ変換」）。</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  const C = CONFIG.planeDemo;
+  const mv = document.getElementById('mv');
+  document.getElementById('title').textContent = C.caption || '';
+  document.title = 'デモC: ' + (C.caption || '');
+  document.getElementById('desc').textContent = C.description || '';
+  document.getElementById('height').textContent = C.heightMeters ? `約 ${C.heightMeters} m` : '—';
+  document.getElementById('model-name').textContent = (C.modelGlb || '').split('/').pop();
+
+  mv.setAttribute('src', C.modelGlb);
+  if (C.modelUsdz) mv.setAttribute('ios-src', C.modelUsdz);   // 手動変換した usdz を明示指定（自動変換に頼らない）
+  if (C.poster) mv.setAttribute('poster', C.poster);
+
+  const note = document.getElementById('ar-note');
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+
+  // usdz が置かれているか確認（無くても Android では動く。iPhone では変換が必要）
+  if (C.modelUsdz) {
+    fetch(C.modelUsdz, { method: 'HEAD' }).then(r => {
+      if (!r.ok) {
+        note.innerHTML = isIOS
+          ? '<span class="ng">✕ iPhone用のファイル(usdz)がまだありません。</span> README の「[人手] USDZ変換」を行ってください。'
+          : '<span class="ng">△ iPhone用のファイル(usdz)がまだありません（Androidでは動きます）</span>';
+        if (isIOS) mv.removeAttribute('ios-src');   // 404 を渡すより無い方がまし（自動変換にフォールバック）
+      } else if (isIOS) {
+        note.innerHTML = '<span class="ok">✔ iPhone: AR Quick Look で開きます</span>';
+      } else if (isAndroid) {
+        note.innerHTML = '<span class="ok">✔ Android: Scene Viewer / WebXR で開きます</span>';
+      } else {
+        note.innerHTML = '<span class="ng">PC では AR に入れません。</span> スマホでこのページを開いてください（3Dは指やマウスで回せます）。';
+      }
+    }).catch(() => {});
+  }
+
+  mv.addEventListener('ar-status', (e) => {
+    const s = e.detail.status;
+    if (s === 'failed') note.innerHTML = '<span class="ng">✕ ARを起動できませんでした。</span> この端末・ブラウザではARに対応していない可能性があります。';
+    if (s === 'session-started') note.innerHTML = '<span class="ok">AR起動中… 床を映してください</span>';
+    if (s === 'object-placed') note.innerHTML = '<span class="ok">✔ 床に置きました</span>';
+  });
+  mv.addEventListener('error', (e) => {
+    note.innerHTML = '<span class="ng">✕ 3Dモデルを読み込めませんでした。</span> config.js の modelGlb のパスを確認してください。';
+  });
+})();
+</script>
+</body>
+</html>
