@@ -7,7 +7,7 @@
     "markers": "node tools/make-markers.mjs",
     "qr": "node tools/make-qr.mjs",
     "video": "node tools/make-video.mjs",
-    "images": "node tools/make-images.mjs",
+    "placeholders": "node tools/make-placeholders.mjs",
     "serve": "npx --yes serve ."
   },
   "dependencies": {
