@@ -9,6 +9,7 @@
 |---|---|---|---|---|
 | `fox.glb` | Fox / https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox | モデル: PixelMannen（CC0）／リギング・アニメ: tomkranis（CC BY 4.0）／glTF変換: @AsoboStudio, @scurest（CC BY 4.0） | CC0 1.0 + CC BY 4.0（要クレジット表記） | 高さ 0.5 単位に縮小（gltf-transform）。アニメ Survey / Walk / Run 入り |
 | `monument.glb` | Lantern / https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Lantern | Microsoft（2017） | CC0 1.0 | 高さ 3.0 m に縮小、テクスチャを 1024px JPEG に圧縮（9.5MB → 0.7MB） |
+| `train.glb` | `tools/make-train.mjs` で生成（箱と円柱だけの簡易な電車・1両・テクスチャ無し） | このリポジトリ | 自由に改変・差し替え可。前が -Z 方向 |
 | `truck.glb` | Cesium Milk Truck / https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CesiumMilkTruck | Cesium | CC BY 4.0（Cesium のロゴを含む。要クレジット表記） | 高さ 2.6 m に縮小。デモCの差し替え候補（アニメ「Wheels」入り） |
 
 ※ `fox.glb` `truck.glb` は CC BY のため、展示で使う場合は上記の作者名を掲示物に書くこと。

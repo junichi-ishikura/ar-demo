@@ -52,6 +52,7 @@ npx http-server . -S -C cert.pem -K key.pem -p 8443
 npm install            # @napi-rs/canvas と qrcode が入る（マーカー / 仮画像 / QR / 動画の生成に使う）
 node tools/make-markers.mjs        # マーカー画像 3枚（assets/markers/）
 node tools/make-placeholders.mjs   # 仮の写真・ポスター・効果音
+node tools/make-train.mjs          # 簡易な電車の 3D モデル（assets/models/train.glb）
 node tools/make-qr.mjs <公開URL>    # QR（assets/qr/）
 node tools/make-video.mjs          # デモBの動画（要 ffmpeg）
 bash tools/make-voice.sh "セリフ"   # セリフ音声（macOS）  / Windows は tools/make-voice.ps1
@@ -113,7 +114,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 
 | 用途 | 今のモデル | 差し替え候補の探し方 |
 |---|---|---|
-| デモA（机の上サイズ、アニメ入り） | `fox.glb` キツネ（Survey/Walk/Run） | Poly Pizza で「animated」+ CC0 で絞る。Khronos の `CesiumMan`（人・歩く）も可 |
+| デモA（机の上サイズ） | `train.glb` 簡易な電車（`tools/make-train.mjs` で生成、発車モード用）。`fox.glb` キツネ（Survey/Walk/Run のアニメ入り）も同梱 | Poly Pizza で「animated」+ CC0 で絞る。Khronos の `CesiumMan`（人・歩く）も可 |
 | デモC（等身大で映える） | `monument.glb` 高さ3mの古い街灯（CC0） | Poly Pizza で「vending machine」「post box」「statue」「sign」。同梱の `truck.glb`（ミルクトラック・CC BY）も可 |
 
 差し替え手順: glb を `assets/models/` に置く → `config.js` のパスを変える → デモCなら usdz も作る → `CREDITS.md` に追記。1モデル 5MB 以内（超えたら `npx @gltf-transform/cli optimize in.glb out.glb --texture-size 1024`）。
@@ -199,6 +200,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 - 実装環境から Poly Pizza / Quaternius / 各CDN にアクセスできなかったため、モデルは Khronos glTF-Sample-Assets からの暫定品。CDN の URL はバージョンを固定し、npm レジストリの実ファイルで存在を確認
 - デモA・Bは 3 枚のマーカーすべてに反応する（印刷した 3 枚のどれでも A・B が動く）
 - 音声ファイルに加えて Web Speech API で `caption` を読み上げる `speakCaption` を追加（音声ファイルを作らなくてもセリフを変えられる）
+- 電車の glb は配布サイトに到達できなかったため、箱と円柱で組んだ簡易モデルを `tools/make-train.mjs` で生成している（色・寸法はスクリプト冒頭の `COLORS` / `SIZE` で変更可）
 - デモA に「発車モード」（`markerDemo.departure`）を追加。認識 → `delay` 秒後に発車音 → モデルが位置と大きさのアニメーションで走り去る。マーカーを外すと出発位置に戻り、再びかざすと繰り返す。アニメ内蔵モデルでなくても動く（「乗り遅れた電車」の表現用）
 - ディレクトリは仕様の `webar-demo/` をリポジトリ直下に展開している
 

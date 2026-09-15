@@ -8,9 +8,11 @@
     "qr": "node tools/make-qr.mjs",
     "video": "node tools/make-video.mjs",
     "placeholders": "node tools/make-placeholders.mjs",
+    "train": "node tools/make-train.mjs",
     "serve": "npx --yes serve ."
   },
   "dependencies": {
+    "@gltf-transform/core": "^4.5.0",
     "@napi-rs/canvas": "^1.0.9",
     "qrcode": "^1.5.4"
   }
