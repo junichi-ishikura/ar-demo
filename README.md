@@ -138,6 +138,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 | 動き | `markerDemo.animation` | `"Walk"` `"Run"` `"Survey"`、`"none"` で回転だけ |
 | 回転の速さ | `markerDemo.rotationSpeed` | `0` で止まる（アニメが無いモデルのとき） |
 | パネルの置き方 | `markerDemo.placement` | `"table"`(机に置く・既定) / `"wall"`(壁に貼る) |
+| **発車モード**（認識したら走り去る） | `markerDemo.departure.enabled` | `true` にする。`delay`(発車までの秒数) `distance`(距離) `duration`(秒数) `direction`(`"away"` 奥へ / `"toward"` / `"left"` / `"right"`) `facing`(モデルの向き。逆向きなら `180`) `sound`(発車音) `message`(走り出したときの文字) を調整。モデルにアニメが無くても動く |
 | 3Dモデルそのもの | `markerDemo.model` | 自分で作った `.glb` を `assets/models/` に入れてパスを書く |
 | 文字パネルの中身 | `infoDemo.text.title` / `.body` | `\n` で改行 |
 | いま／むかしの写真 | `infoDemo.photoNow` / `photoOld` | `assets/images/` に写真を入れてパスを書く |
@@ -198,6 +199,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 - 実装環境から Poly Pizza / Quaternius / 各CDN にアクセスできなかったため、モデルは Khronos glTF-Sample-Assets からの暫定品。CDN の URL はバージョンを固定し、npm レジストリの実ファイルで存在を確認
 - デモA・Bは 3 枚のマーカーすべてに反応する（印刷した 3 枚のどれでも A・B が動く）
 - 音声ファイルに加えて Web Speech API で `caption` を読み上げる `speakCaption` を追加（音声ファイルを作らなくてもセリフを変えられる）
+- デモA に「発車モード」（`markerDemo.departure`）を追加。認識 → `delay` 秒後に発車音 → モデルが位置と大きさのアニメーションで走り去る。マーカーを外すと出発位置に戻り、再びかざすと繰り返す。アニメ内蔵モデルでなくても動く（「乗り遅れた電車」の表現用）
 - ディレクトリは仕様の `webar-demo/` をリポジトリ直下に展開している
 
 ## ファイル構成

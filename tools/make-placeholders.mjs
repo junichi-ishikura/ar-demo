@@ -125,4 +125,21 @@ function tone(freqs, seconds, rate = 22050, decay = 4) {
 writeFileSync(join(AUD, 'chime.wav'), wav(tone([[659.25, 0, 1], [523.25, 0.28, 1]], 1.4, 22050, 3)));
 // ポン
 writeFileSync(join(AUD, 'pon.wav'), wav(tone([[880, 0, 1], [1320, 0, 0.3]], 0.25, 22050, 18)));
-console.log('wrote', join(AUD, 'chime.wav'), join(AUD, 'pon.wav'));
+// 発車（ドアが閉まるチャイム「ピンポン」×3 → 低い走行音が立ち上がる）
+{
+  const chime = [];
+  for (let k = 0; k < 3; k++) chime.push([987.77, k * 0.45, 0.7], [783.99, k * 0.45 + 0.2, 0.7]);
+  const a = tone(chime, 1.6, 22050, 10);
+  const rate = 22050, n = Math.floor(2.2 * rate), rumble = new Float32Array(n);
+  let ph = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / rate; const f = 40 + t * 60;  ph += 2 * Math.PI * f / rate;   // 徐々に高く（加速）
+    const env = Math.min(1, t / 0.8) * Math.max(0, 1 - Math.max(0, t - 1.4) / 0.8);
+    rumble[i] = (Math.sin(ph) * 0.5 + (Math.random() - 0.5) * 0.35) * env * 0.5;
+  }
+  const out = new Float32Array(a.length + n - Math.floor(0.4 * rate));
+  a.forEach((v, i) => out[i] += v);
+  rumble.forEach((v, i) => { const j = i + a.length - Math.floor(0.4 * rate); if (j < out.length) out[j] += v; });
+  writeFileSync(join(AUD, 'hassha.wav'), wav(out));
+}
+console.log('wrote', join(AUD, 'chime.wav'), join(AUD, 'pon.wav'), join(AUD, 'hassha.wav'));

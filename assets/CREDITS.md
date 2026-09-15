@@ -25,7 +25,7 @@
 
 | ファイル名 | 出典 | ライセンス |
 |---|---|---|
-| `chime.wav` `pon.wav` | `tools/make-placeholders.mjs` で生成（サイン波の合成音） | 同上 |
+| `chime.wav` `pon.wav` `hassha.wav` | `tools/make-placeholders.mjs` で生成（サイン波・ノイズの合成音） | 同上 |
 | `serifu.mp3`（未作成） | `tools/make-voice.sh` / `.ps1` で OS の読み上げから生成する | 生成した本人 |
 | 効果音（未取得） | [人手] 効果音ラボ https://soundeffect-lab.info/ など、利用条件が日本語で明記されたサイトから選ぶ。1ファイル数百KB以内 | 各サイトの規約に従う（取得したらここに追記） |
 

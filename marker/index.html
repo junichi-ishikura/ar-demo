@@ -43,6 +43,7 @@
 <!-- 音（HTMLのaudioで鳴らす。A-Frameのsoundは iOS で不安定なので使わない） -->
 <audio id="sfx-main" preload="auto"></audio>
 <audio id="sfx-tap" preload="auto"></audio>
+<audio id="sfx-depart" preload="auto"></audio>
 
 <!-- 3) ARシーン -->
 <a-scene
@@ -73,8 +74,19 @@
 
   const sfxMain = document.getElementById('sfx-main');
   const sfxTap = document.getElementById('sfx-tap');
+  const sfxDepart = document.getElementById('sfx-depart');
   if (C.audio) sfxMain.src = C.audio;
   if (C.tapSound) sfxTap.src = C.tapSound;
+
+  // 発車モードの設定（config.js の markerDemo.departure）
+  const D = Object.assign({ enabled: false, delay: 1.5, distance: 4, duration: 4, direction: 'away', facing: 0, shrink: true, sound: '', message: '' }, C.departure || {});
+  const departOn = !!D.enabled;
+  if (departOn && D.sound) sfxDepart.src = D.sound;
+  // 走る向き（モデルを載せたグループの座標。away = パネルの奥、toward = 手前）
+  const DIRS = { away: [0, 0, -1], toward: [0, 0, 1], left: [-1, 0, 0], right: [1, 0, 0] };
+  const dir = DIRS[D.direction] || DIRS.away;
+  let departTimer = null;
+  const departModels = [];   // 各マーカー上のモデル（発車の開始・リセット用）
   document.getElementById('model').setAttribute('src', C.model);
 
   // パネルの置き方: 机に置く(table)ならモデルを紙から「立ち上げる」、壁に貼る(wall)ならそのまま
@@ -99,6 +111,11 @@
     model.setAttribute('scale', `${scale} ${scale} ${scale}`);
     // タップで跳ねる
     model.setAttribute('animation__bounce', `property: object3D.position.y; from: ${y}; to: ${y + 0.25}; dur: 180; dir: alternate; loop: 1; easing: easeOutQuad; startEvents: bounce`);
+    if (departOn) {
+      model.setAttribute('rotation', `0 ${Number(D.facing) || 0} 0`);
+      armDeparture(model);
+      departModels.push(model);
+    }
     model.addEventListener('model-loaded', (e) => {
       const anims = (e.detail.model && e.detail.model.animations) || [];
       clipNames = anims.map(a => a.name);
@@ -106,7 +123,7 @@
         const clip = C.animation && clipNames.includes(C.animation) ? C.animation : clipNames[0];
         clipIndex = clipNames.indexOf(clip);
         model.setAttribute('animation-mixer', `clip: ${clip}; loop: repeat`);
-      } else if ((Number(C.rotationSpeed) || 0) > 0) {
+      } else if (!departOn && (Number(C.rotationSpeed) || 0) > 0) {
         // アニメが無ければY軸回転
         model.setAttribute('animation__spin', `property: rotation; to: 0 360 0; loop: true; dur: ${Math.round(360 / Number(C.rotationSpeed) * 1000)}; easing: linear`);
       }
@@ -146,11 +163,49 @@
 
     target.appendChild(group);
   }, {
-    onFound() { AR.playAudio(sfxMain); if (C.speakCaption) AR.speak(C.caption); },
-    onLost()  { AR.stopAudio(sfxMain); AR.stopSpeak(); },
+    onFound() {
+      AR.playAudio(sfxMain); if (C.speakCaption) AR.speak(C.caption);
+      if (departOn) {
+        // 認識するたびに出発位置に戻してから、delay 秒後に発車
+        resetDeparture();
+        departTimer = setTimeout(() => {
+          departTimer = null;
+          AR.playAudio(sfxDepart);
+          departModels.forEach(m => m.emit('depart'));
+          if (D.message) AR.setStatus(D.message, 'found');
+        }, (Number(D.delay) || 0) * 1000);
+      }
+    },
+    onLost() {
+      AR.stopAudio(sfxMain); AR.stopSpeak();
+      if (departOn) { AR.stopAudio(sfxDepart); resetDeparture(); }
+    },
   });
 
-  AR.setupGate({ audios: [sfxMain, sfxTap] });
+  // 発車アニメーションを（再）セットする。startEvents: depart で走り出す
+  function armDeparture(model) {
+    const dist = Number(D.distance) || 0;
+    const dur = Math.max(100, (Number(D.duration) || 1) * 1000);
+    const to = `${dir[0] * dist} ${y + dir[1] * dist} ${dir[2] * dist}`;
+    model.setAttribute('animation__depart', `property: position; from: 0 ${y} 0; to: ${to}; dur: ${dur}; easing: easeInQuad; startEvents: depart`);
+    if (D.shrink) {
+      const s2 = scale * 0.35;
+      model.setAttribute('animation__shrink', `property: scale; from: ${scale} ${scale} ${scale}; to: ${s2} ${s2} ${s2}; dur: ${dur}; easing: easeInQuad; startEvents: depart`);
+    }
+  }
+  // 出発位置に戻す（マーカーを外したとき・再認識したとき）
+  function resetDeparture() {
+    if (departTimer) { clearTimeout(departTimer); departTimer = null; }
+    departModels.forEach(m => {
+      m.removeAttribute('animation__depart');
+      m.removeAttribute('animation__shrink');
+      m.setAttribute('position', `0 ${y} 0`);
+      m.setAttribute('scale', `${scale} ${scale} ${scale}`);
+      armDeparture(m);
+    });
+  }
+
+  AR.setupGate({ audios: [sfxMain, sfxTap, sfxDepart] });
 })();
 </script>
 </body>
