@@ -40,6 +40,10 @@
       <span class="badge">C</span>
       <span><span class="title">床に等身大で置く</span><span class="sub">マーカー不要。床を映すと自動で出る</span></span>
       <span class="chev">›</span></a></li>
+    <li><a class="demo-btn d" href="photo/">
+      <span class="badge">D</span>
+      <span><span class="title">床に並べて記念撮影</span><span class="sub">「だんだん」の立体文字 ＋ 等身大の白鳥。写真も撮れる</span></span>
+      <span class="chev">›</span></a></li>
   </ul>
 
   <!-- 使う前の注意 -->
@@ -91,10 +95,10 @@
   if (isIOS) {
     html += '<span class="ok">✔ iPhone / iPad</span><br>'
       + 'デモA・Bは<strong>このページ内</strong>で動きます。<br>'
-      + 'デモCは <strong>Apple標準のARビューア（AR Quick Look）</strong>が開きます。'
+      + 'デモC・Dは <strong>Apple標準のARビューア（AR Quick Look）</strong>が開きます。'
       + (isSafari ? '' : '<br><span class="ng">※ Safari で開いてください</span>（他のブラウザだとカメラが使えません）');
   } else if (isAndroid) {
-    html += '<span class="ok">✔ Android</span><br>3つとも動きます。'
+    html += '<span class="ok">✔ Android</span><br>4つとも動きます。'
       + (isChrome ? '' : '<br><span class="ng">※ Chrome で開いてください</span>');
     if (!hasCamera) html += '<br><span class="ng">✕ カメラAPIが見つかりません</span>';
   } else {

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>デモD: 床に並べて記念撮影</title>
+<link rel="stylesheet" href="../style.css">
+<script src="../config.js"></script>
+<!-- model-viewer 4.3.1（デモCと同じ。latest にしない） -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+<!-- three.js 0.160.0（モデルを並べる・撮影モードの3D表示。バージョン固定） -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud-top" style="position:static;padding:12px 0 0">
+    <a class="btn white back" href="../">‹ もどる</a>
+    <span class="name">デモD　床に並べて撮る</span>
+  </div>
+
+  <header class="sign-head">
+    <p class="eyebrow">平面配置 AR ＋ 記念撮影</p>
+    <h1 id="title">だんだん、白鳥さん</h1>
+  </header>
+
+  <p id="desc" style="font-weight:700"></p>
+
+  <!-- 1) 本物の床に置く（デモCと同じしくみ） -->
+  <section class="board">
+    <h2>① ARで床に置く</h2>
+    <model-viewer id="mv"
+      alt="床に置く3Dモデル"
+      ar ar-modes="webxr quick-look"
+      ar-scale="fixed" ar-placement="floor"
+      camera-controls touch-action="pan-y"
+      camera-orbit="0deg 80deg auto"
+      shadow-intensity="1" exposure="1">
+      <button slot="ar-button" class="ar-button" id="ar-btn">▶ ARで床に置く</button>
+      <div slot="progress-bar"></div>
+    </model-viewer>
+    <p class="device" id="mv-status">3Dモデルを読み込み中…（はじめは数秒かかります）</p>
+    <ul>
+      <li>床を映すと、<strong>実物大</strong>で床に立ちます（全体の横幅は 4m くらい。少し下がって映してください）</li>
+      <li><strong>iPhone</strong>: AR画面の下にある <strong>白い丸ボタン（シャッター）</strong>で写真が撮れます（「写真」アプリに保存）</li>
+      <li><strong>Android</strong>: 写真ボタンは出ません。<strong>電源ボタン＋音量下ボタン</strong>でスクリーンショット</li>
+    </ul>
+  </section>
+
+  <!-- 2) ページ内の撮影モード -->
+  <section class="board">
+    <h2>② 撮影モード</h2>
+    <p>このページの中でカメラに重ねて表示し、<strong>シャッターボタンで写真を保存</strong>できます（iPhone / Android どちらも）。</p>
+    <ul>
+      <li>床にピタッと固定はされません（画面に重ねて表示）。<strong>指でずらして</strong>床に置いたように合わせます</li>
+      <li>1本指: 動かす　/　2本指: 大きさ・向き</li>
+    </ul>
+    <p style="margin-top:12px"><button class="btn red block" id="shoot-btn" disabled>📷 撮影モードをひらく</button></p>
+  </section>
+
+  <section class="board">
+    <h2>デモCとのちがい</h2>
+    <ul>
+      <li>モデルを<strong>2つ以上並べて</strong>出せる（<code>config.js</code> の <code>photoDemo.models</code> に足すだけ）</li>
+      <li>ARビューアの中では写真ボタンを足せない → <strong>撮影モード</strong>を別に用意した</li>
+      <li>①は床に固定されるが写真はOS任せ、②は自由に撮れるが床には固定されない。<strong>どちらが展示向きか</strong>考えてみよう</li>
+    </ul>
+  </section>
+</div>
+
+<!-- 撮影モード（全画面） -->
+<div class="shoot" id="shoot" hidden>
+  <video id="cam" playsinline muted autoplay></video>
+  <canvas id="gl"></canvas>
+  <div class="flash" id="flash"></div>
+
+  <div class="hud-top">
+    <button class="btn white back" id="shoot-close">✕ とじる</button>
+    <span class="name">撮影モード</span>
+  </div>
+  <div class="shoot-hint" id="shoot-hint">1本指で動かす / 2本指で大きさ・向き</div>
+  <div class="shoot-bar">
+    <button class="btn white shoot-small" id="shoot-reset">↺ 戻す</button>
+    <button class="shutter" id="shutter" aria-label="写真を撮る"></button>
+    <span></span>
+  </div>
+
+  <!-- 撮った写真のプレビュー -->
+  <div class="shot-preview" id="preview" hidden>
+    <img id="preview-img" alt="撮った写真">
+    <p class="shot-note">保存できないときは、写真を<strong>長押し</strong>して保存してください</p>
+    <div class="shot-actions">
+      <button class="btn green" id="save-btn">保存する</button>
+      <button class="btn white" id="retake-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { buildGroup, toGlbUrl } from './scene.js';
+
+const C = CONFIG.photoDemo;
+const P = C.photo || {};
+document.getElementById('title').textContent = C.caption || '';
+document.title = 'デモD: ' + (C.caption || '');
+document.getElementById('desc').textContent = C.description || '';
+
+const mv = document.getElementById('mv');
+const mvStatus = document.getElementById('mv-status');
+const shootBtn = document.getElementById('shoot-btn');
+
+// ---------------------------------------------------------------
+// モデルを読み込んで並べる → ① model-viewer 用に 1つの glb にまとめる
+// ---------------------------------------------------------------
+let group;
+try {
+  group = await buildGroup(C.models || [], (n, all) => { mvStatus.textContent = `3Dモデルを読み込み中… ${n} / ${all}`; });
+  mv.src = await toGlbUrl(group);   // iPhone 用の usdz は model-viewer がその場で作る（ios-src なし）
+  shootBtn.disabled = false;
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  mvStatus.innerHTML = isIOS ? '<span class="ok">✔ iPhone: AR Quick Look で開きます</span>'
+    : isAndroid ? '<span class="ok">✔ Android: ARで開きます（ARCore対応機種）</span>'
+    : '<span class="ng">PC では AR に入れません。</span> スマホで開いてください（3Dは指やマウスで回せます）';
+} catch (e) {
+  console.error(e);
+  mvStatus.innerHTML = '<span class="ng">✕ ' + e.message + '</span><br>config.js の photoDemo.models のパスを確認してください。';
+}
+mv.addEventListener('ar-status', (e) => {
+  const s = e.detail.status;
+  if (s === 'failed') mvStatus.innerHTML = '<span class="ng">✕ ARを起動できませんでした。</span> この端末では②撮影モードを使ってください。';
+  if (s === 'session-started') mvStatus.innerHTML = '<span class="ok">AR起動中… 床を映してください</span>';
+});
+
+// ---------------------------------------------------------------
+// ② 撮影モード
+// ---------------------------------------------------------------
+const shoot = document.getElementById('shoot');
+const video = document.getElementById('cam');
+const canvas = document.getElementById('gl');
+const hint = document.getElementById('shoot-hint');
+let renderer, scene, camera, stage, stream, running = false;
+const EYE = P.cameraHeight || 1.4;
+let DIST = 7, groupSize;
+// 全体が画面の横幅に収まる距離（config の distance が 0 のとき）
+function fitDistance() {
+  if (P.distance) return P.distance;
+  const size = groupSize;
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dW = (size.x / 2) / (half * camera.aspect * 0.85) + size.z / 2;
+  const dH = size.y / (half * 0.9);
+  return THREE.MathUtils.clamp(Math.max(dW, dH, 3), 3, 30);
+}
+
+function setupThree() {
+  renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a8a, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+  sun.position.set(-3, 8, 4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.5, far: 30 });
+
+  // stage = 床ごと動かす台（モデル + 影を受ける透明な床）
+  groupSize = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3());
+  stage = new THREE.Group();
+  stage.add(group);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.32 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  stage.add(floor);
+  stage.add(sun); stage.add(sun.target);
+  scene.add(stage);
+
+  camera = new THREE.PerspectiveCamera(60, 1, 0.05, 200);
+  camera.position.set(0, EYE, 0);
+}
+function resetStage() {
+  DIST = fitDistance();
+  camera.lookAt(0, EYE * 0.45, -DIST);
+  stage.position.set(0, 0, -DIST);
+  stage.scale.setScalar(1);
+  stage.rotation.y = 0;
+}
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = w < h ? 62 : 42;   // スマホの背面カメラの画角くらい
+  camera.updateProjectionMatrix();
+  camera.lookAt(0, EYE * 0.45, -DIST);
+}
+function loop() {
+  if (!running) return;
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+shootBtn.addEventListener('click', async () => {
+  shoot.hidden = false;
+  document.body.style.overflow = 'hidden';
+  const first = !renderer;
+  if (first) setupThree();
+  resize();
+  if (first) resetStage();
+  running = true; loop();
+  hint.textContent = 'カメラを起動中…';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    hint.textContent = '1本指で動かす / 2本指で大きさ・向き';
+  } catch (e) {
+    hint.textContent = '✕ カメラを使えません（カメラを許可したか、https で開いているか確認）';
+  }
+});
+function closeShoot() {
+  running = false;
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = null;
+  shoot.hidden = true;
+  document.body.style.overflow = '';
+}
+document.getElementById('shoot-close').addEventListener('click', closeShoot);
+document.getElementById('shoot-reset').addEventListener('click', resetStage);
+addEventListener('resize', () => { if (renderer) resize(); });
+
+// --- 指で動かす: 1本指 = 床の上を移動、2本指 = 大きさ・向き ---
+const ray = new THREE.Raycaster();
+const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const pointers = new Map();
+let dragOffset = null, pinch = null;
+function floorPoint(x, y) {
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
+  return ray.ray.intersectPlane(ground, new THREE.Vector3());
+}
+function twoFinger() {
+  const [a, b] = [...pointers.values()];
+  return { d: Math.hypot(b.x - a.x, b.y - a.y), ang: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) {
+    const p = floorPoint(e.clientX, e.clientY);
+    dragOffset = p ? stage.position.clone().sub(p) : null;
+  } else if (pointers.size === 2) {
+    dragOffset = null;
+    pinch = { ...twoFinger(), scale: stage.scale.x, rot: stage.rotation.y };
+  }
+  hint.style.opacity = 0;
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1 && dragOffset) {
+    const p = floorPoint(e.clientX, e.clientY);
+    if (p) {
+      const next = p.add(dragOffset);
+      if (next.z < -1.5 && next.z > -40) stage.position.set(next.x, 0, next.z);   // カメラの後ろ・遠すぎには行かせない
+    }
+  } else if (pointers.size === 2 && pinch) {
+    const t = twoFinger();
+    stage.scale.setScalar(THREE.MathUtils.clamp(pinch.scale * (t.d / pinch.d), 0.2, 4));
+    stage.rotation.y = pinch.rot - (t.ang - pinch.ang);
+  }
+});
+const up = (e) => { pointers.delete(e.pointerId); pinch = null; dragOffset = null;
+  if (pointers.size === 1) { const [p] = pointers.values(); const f = floorPoint(p.x, p.y); dragOffset = f ? stage.position.clone().sub(f) : null; } };
+canvas.addEventListener('pointerup', up);
+canvas.addEventListener('pointercancel', up);
+
+// --- シャッター: カメラ映像 + 3D を 1枚の画像に合成 ---
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('preview-img');
+let lastBlob = null, lastName = '';
+function stamp(ctx, w, h) {
+  if (!P.stamp) return;
+  const fs = Math.round(Math.min(w, h) * 0.06);
+  ctx.font = `900 ${fs}px "BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.lineWidth = fs * 0.18; ctx.strokeStyle = '#141414'; ctx.lineJoin = 'round';
+  ctx.strokeText(P.stamp, w - fs * 0.6, h - fs * 0.5);
+  ctx.fillStyle = '#f7c600';
+  ctx.fillText(P.stamp, w - fs * 0.6, h - fs * 0.5);
+}
+function clickSound() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ac.createBuffer(1, ac.sampleRate * 0.08, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination); src.start();
+    setTimeout(() => ac.close(), 300);
+  } catch (e) {}
+}
+document.getElementById('shutter').addEventListener('click', () => {
+  renderer.render(scene, camera);   // 最新の1コマを描いてから合成
+  const sw = innerWidth, sh = innerHeight;
+  // 画面と同じ縦横比で、なるべく高解像度に（最大 2048px）
+  const k = Math.min(2048 / Math.max(sw, sh), Math.max(video.videoWidth / sw, video.videoHeight / sh, 1) || 2);
+  const W = Math.round(sw * k), H = Math.round(sh * k);
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (video.videoWidth) {   // object-fit: cover と同じ切り抜き
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const s = Math.max(W / vw, H / vh);
+    ctx.drawImage(video, (W - vw * s) / 2, (H - vh * s) / 2, vw * s, vh * s);
+  }
+  ctx.drawImage(canvas, 0, 0, W, H);
+  stamp(ctx, W, H);
+
+  clickSound();
+  const flash = document.getElementById('flash');
+  flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
+
+  const t = new Date(), z = (n) => String(n).padStart(2, '0');
+  lastName = `${P.fileName || 'photo'}-${t.getFullYear()}${z(t.getMonth() + 1)}${z(t.getDate())}-${z(t.getHours())}${z(t.getMinutes())}${z(t.getSeconds())}.jpg`;
+  out.toBlob((blob) => {
+    lastBlob = blob;
+    if (previewImg.src) URL.revokeObjectURL(previewImg.src);
+    previewImg.src = URL.createObjectURL(blob);
+    preview.hidden = false;
+  }, 'image/jpeg', 0.92);
+});
+document.getElementById('retake-btn').addEventListener('click', () => { preview.hidden = true; });
+document.getElementById('save-btn').addEventListener('click', async () => {
+  if (!lastBlob) return;
+  const file = new File([lastBlob], lastName, { type: 'image/jpeg' });
+  // スマホ: 共有シート（iPhone は「画像を保存」で写真アプリへ）。使えなければダウンロード
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: C.caption || '' }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = previewImg.src; a.download = lastName;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@
 | **A** `marker/` | パネル(マーカー)にかざすと 3D が出て、動いて、音が鳴る。タップで跳ねる | MindAR（画像トラッキング）+ A-Frame |
 | **B** `marker/info.html` | **同じパネル**で「文字 / いま⇄むかしの写真 / 動画」が出る | 同上 |
 | **C** `plane/` | 床を映すと**実物大**のモデルが自動で立つ（マーカー不要） | `<model-viewer>`（Scene Viewer / AR Quick Look） |
+| **D** `photo/` | 大きな「だんだん」の立体文字と等身大の白鳥を**床に並べる** + **記念撮影** | `<model-viewer>`（WebXR / AR Quick Look）+ three.js |
 
 - トップ `index.html` … 3デモへの入口、端末チェック、注意、マーカー画像
 - 印刷 `print/index.html` … A4 × 3枚（マーカー + QR + 手順）
@@ -53,6 +54,7 @@ npm install            # @napi-rs/canvas と qrcode が入る（マーカー / �
 node tools/make-markers.mjs        # マーカー画像 3枚（assets/markers/）
 node tools/make-placeholders.mjs   # 仮の写真・ポスター・効果音
 node tools/make-train.mjs          # 簡易な電車の 3D モデル（assets/models/train.glb）
+node tools/optimize-models.mjs     # 重い glb をスマホ向けに軽くする（dandan.glb → dandan-web.glb など）
 node tools/make-qr.mjs <公開URL>    # QR（assets/qr/）
 node tools/make-video.mjs          # デモBの動画（要 ffmpeg）
 bash tools/make-voice.sh "セリフ"   # セリフ音声（macOS）  / Windows は tools/make-voice.ps1
@@ -123,6 +125,26 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 効果音ラボ https://soundeffect-lab.info/ など、利用条件が日本語で明記されたサイトから選んで `assets/audio/` に置き、`config.js` の `tapSound` / `audio` を変更、`CREDITS.md` に追記（1ファイル数百KB以内）。今は合成音の `chime.wav` `pon.wav` が仮で入っています。
 
 ---
+
+## デモD: 床に並べて記念撮影
+
+`config.js` の `photoDemo.models` に書いたモデルを**並べて1つにまとめ**、床に置きます。モデルは何個でも足せます。
+
+| | ① ARで床に置く | ② 撮影モード |
+|---|---|---|
+| しくみ | `<model-viewer>`（Android: WebXR / iPhone: AR Quick Look） | ページ内でカメラ映像に three.js の 3D を重ねる |
+| 床への固定 | ◎ 本物の床に固定・実物大 | △ 固定されない。指でずらして床に合わせる |
+| 写真 | iPhone: Quick Look の**白いシャッターボタン**（長押しで動画）／ Android: **スクショ**（電源＋音量下） | **シャッターボタン → 保存**（iPhone は共有シートの「画像を保存」で写真アプリへ） |
+
+- 撮った写真には右下に `photo.stamp` の文字が入ります（`""` で消える）
+- ① は、ページ側で 2つのモデルを 1つの glb にまとめて渡しているため、iPhone 用 usdz は model-viewer が**その場で自動生成**します（手作業の USDZ 変換は不要。生成に数秒かかる）
+- Android の ① は WebXR（ARCore 対応機種の Chrome）。Scene Viewer はページ内で作ったファイルを開けないので使っていません。ARに入れない機種は ② を使う
+
+### モデルの軽量化（`tools/optimize-models.mjs`）
+持ち込みの `dandan.glb`（59MB）`swan.glb`（77MB）は各 200 万ポリゴンあり、スマホではまず開けません。`node tools/optimize-models.mjs` で
+三角形を 8 万に間引き・テクスチャを 1024px にした `dandan-web.glb`（2.0MB）`swan-web.glb`（2.4MB）を作り、こちらを使っています。
+同時に向きも直しています（文字は床に寝ていたので起こす／白鳥は骨入りだったので今のポーズで焼き込み、正面を手前に）。
+モデルを作り直したら、同じ名前で置いてこのスクリプトを再実行してください。別のモデルは `node tools/optimize-models.mjs in.glb out.glb 80000`。
 
 ## 3. 遊び方（生徒向け）― `config.js` を書き換える
 
@@ -212,6 +234,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 ├── style.css
 ├── marker/             デモA index.html / デモB info.html / 共通 ar-common.js / targets.mind
 ├── plane/index.html    デモC
+├── photo/              デモD index.html / scene.js（モデルを並べる・glb にまとめる）
 ├── print/index.html    印刷用（A4 × 3）
 ├── assets/             models(glb+usdz) / audio / video / images / markers / qr / CREDITS.md
 └── tools/              make-markers.mjs / make-qr.mjs / make-video.mjs / make-placeholders.mjs
