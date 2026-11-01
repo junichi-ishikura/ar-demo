@@ -13,6 +13,7 @@
 | `truck.glb` | Cesium Milk Truck / https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/CesiumMilkTruck | Cesium | CC BY 4.0（Cesium のロゴを含む。要クレジット表記） | 高さ 2.6 m に縮小。デモCの差し替え候補（アニメ「Wheels」入り） |
 | `dandan.glb` `swan.glb` | 持ち込み（ノード名から Tripo AI で生成したモデルと思われる） | — | 生成サービスの利用規約を確認すること（Tripo は無料プランだと CC BY 4.0 扱いの場合あり） | 元ファイル（約60MB / 77MB・各200万ポリゴン）。そのままではスマホで重すぎるので下の -web 版を使う |
 | `dandan-web.glb` `swan-web.glb` | 上の2つを `tools/optimize-models.mjs` で軽量化 | 同上 | 同上 | 8万ポリゴン・テクスチャ1024px（2.0MB / 2.4MB）。文字は起こして正面を +Z に、白鳥は骨を今のポーズで焼き込み正面を +Z に |
+| `dandan-swan.glb` `dandan-swan.usdz` | 上の -web 版を `config.js` の配置で並べ、`tools/make-photo-ar.html` で 1 ファイルにまとめたもの（デモD の「ARで床に置く」用） | 同上 | 同上 | 幅 4.65m × 高さ 1.3m |
 
 ※ `fox.glb` `truck.glb` は CC BY のため、展示で使う場合は上記の作者名を掲示物に書くこと。
 ※ `*.usdz` は上記 glb を `tools/usdz-convert.html` で変換したもの（同じライセンス）。

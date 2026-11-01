@@ -137,8 +137,11 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 | 写真 | iPhone: Quick Look の**白いシャッターボタン**（長押しで動画）／ Android: **スクショ**（電源＋音量下） | **シャッターボタン → 保存**（iPhone は共有シートの「画像を保存」で写真アプリへ） |
 
 - 撮った写真には右下に `photo.stamp` の文字が入ります（`""` で消える）
-- ① は、ページ側で 2つのモデルを 1つの glb にまとめて渡しているため、iPhone 用 usdz は model-viewer が**その場で自動生成**します（手作業の USDZ 変換は不要。生成に数秒かかる）
-- Android の ① は WebXR（ARCore 対応機種の Chrome）。Scene Viewer はページ内で作ったファイルを開けないので使っていません。ARに入れない機種は ② を使う
+- ① は、2つのモデルを並べて 1つにまとめた `dandan-swan.glb`（Android 用・4.4MB）/ `dandan-swan.usdz`（iPhone 用・19MB）を開きます。デモCと同じく Android は WebXR → Scene Viewer、iPhone は AR Quick Look
+- 「▶ ARで床に置く」ボタンは常に表示し、AR が使えない環境（PC、LINE などのアプリ内ブラウザ、iPhone の Chrome、ARCore 非対応機種）では押すと理由と対処が出ます
+- **`config.js` の `photoDemo.models`（大きさ・位置・向き・モデル）を変えたら、`dandan-swan.glb/.usdz` を作り直す**:
+  `npx serve .` → `/tools/make-photo-ar.html` を開く → 出てきた 2 つのリンクを保存 → `assets/models/` に上書き。
+  作り直していない（ファイルが無い）ときは、ページの中でその場でまとめて表示します（Scene Viewer が使えないので、AR に入れる機種が減る）
 
 ### モデルの軽量化（`tools/optimize-models.mjs`）
 持ち込みの `dandan.glb`（59MB）`swan.glb`（77MB）は各 200 万ポリゴンあり、スマホではまず開けません。`node tools/optimize-models.mjs` で
@@ -234,7 +237,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 ├── style.css
 ├── marker/             デモA index.html / デモB info.html / 共通 ar-common.js / targets.mind
 ├── plane/index.html    デモC
-├── photo/              デモD index.html / scene.js（モデルを並べる・glb にまとめる）
+├── photo/              デモD index.html / scene.js（モデルを並べる・glb にまとめる）。AR用まとめファイルは tools/make-photo-ar.html で作る
 ├── print/index.html    印刷用（A4 × 3）
 ├── assets/             models(glb+usdz) / audio / video / images / markers / qr / CREDITS.md
 └── tools/              make-markers.mjs / make-qr.mjs / make-video.mjs / make-placeholders.mjs
