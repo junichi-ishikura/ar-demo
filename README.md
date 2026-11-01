@@ -137,7 +137,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 | 写真 | iPhone: Quick Look の**白いシャッターボタン**（長押しで動画）／ Android: **スクショ**（電源＋音量下） | **シャッターボタン → 保存**（iPhone は共有シートの「画像を保存」で写真アプリへ） |
 
 - 撮った写真には右下に `photo.stamp` の文字が入ります（`""` で消える）
-- ① は、2つのモデルを並べて 1つにまとめた `dandan-swan.glb`（Android 用・4.4MB）/ `dandan-swan.usdz`（iPhone 用・19MB）を開きます。Android は **Scene Viewer（Google の AR アプリ）を優先**し、使えなければ WebXR、iPhone は AR Quick Look（Pixel の WebXR ではモデルが出ないことがあったため、デモCと順番を変えている）
+- ① は、2つのモデルを並べて 1つにまとめた `dandan-swan.glb`（Android 用・4.4MB）/ `dandan-swan.usdz`（iPhone 用・19MB）を開きます。iPhone は AR Quick Look。Android は WebXR が使えれば**自作の AR（`lib/xr-place.js`）**、使えなければ Scene Viewer
 - 「▶ ARで床に置く」ボタンは常に表示し、AR が使えない環境（PC、LINE などのアプリ内ブラウザ、iPhone の Chrome、ARCore 非対応機種）では押すと理由と対処が出ます
 - **`config.js` の `photoDemo.models`（大きさ・位置・向き・モデル）を変えたら、`dandan-swan.glb/.usdz` を作り直す**:
   `npx serve .` → `/tools/make-photo-ar.html` を開く → 出てきた 2 つのリンクを保存 → `assets/models/` に上書き。
@@ -148,6 +148,19 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 三角形を 8 万に間引き・テクスチャを 1024px にした `dandan-web.glb`（2.0MB）`swan-web.glb`（2.4MB）を作り、こちらを使っています。
 同時に向きも直しています（文字は床に寝ていたので起こす／白鳥は骨入りだったので今のポーズで焼き込み、正面を手前に）。
 モデルを作り直したら、同じ名前で置いてこのスクリプトを再実行してください。別のモデルは `node tools/optimize-models.mjs in.glb out.glb 80000`。
+
+## Android の AR（自作 WebXR）と診断ページ
+
+Pixel（Chrome 157）で、model-viewer の WebXR ではカメラは出るのにモデルが出ず、Scene Viewer は Google のサンプルでも起動せずすぐ戻った。
+そのため **デモC・D は、Android で WebXR が使えるときは自作の AR（`lib/xr-place.js`、three.js 0.160.0）で開く**。
+
+- 開くとすぐ目の前に仮の位置で表示 → 床が見つかると白い輪が出て、モデルが輪の上に移る → **タップで固定**（もう一度タップで置き直し）
+- モデルの正面は置いたときのスマホの方を向く。影は透明な床に落とす
+- AR 中の画面に「✕ とじる」・案内文・バージョン番号を重ねている（DOM オーバーレイ）
+
+**`check/`（AR 診断ページ）**: Scene Viewer・model-viewer の WebXR・自作 AR を個別に試せる。端末で AR が出ないときに使う（トップページ下にリンク）。
+
+**バージョン番号**: 全ページの右下に `version.js` の `APP_VERSION` を表示。更新を push したら番号を上げる。スマホで古い番号のままなら、GitHub Pages の反映待ち（数分）かキャッシュなので、少し待って再読み込み。
 
 ## 3. 遊び方（生徒向け）― `config.js` を書き換える
 
@@ -240,6 +253,8 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 ├── photo/              デモD index.html / scene.js（モデルを並べる・glb にまとめる）。AR用まとめファイルは tools/make-photo-ar.html で作る
 ├── print/index.html    印刷用（A4 × 3）
 ├── check/index.html    AR 診断ページ（Scene Viewer / WebXR を個別に試す。Android で出ないときに使う）
+├── lib/xr-place.js     Android 用の自作 AR（WebXR + three.js。床を探してタップで置く）
+├── version.js          バージョン番号（全ページの右下に表示）
 ├── assets/             models(glb+usdz) / audio / video / images / markers / qr / CREDITS.md
 └── tools/              make-markers.mjs / make-qr.mjs / make-video.mjs / make-placeholders.mjs
                         make-voice.sh / make-voice.ps1 / usdz-convert.html

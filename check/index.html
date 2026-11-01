@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AR 診断ページ</title>
 <link rel="stylesheet" href="../style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <!-- デモC・D と同じ model-viewer 4.3.1 -->
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
 <style>
@@ -17,6 +23,7 @@
   .log { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; background: #fff; border: 3px solid var(--ink);
          padding: 8px 10px; min-height: 3em; white-space: pre-wrap; }
 </style>
+<script src="../version.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -81,10 +88,21 @@
   </section>
 
   <section class="board">
+    <h2>3. 自作の AR（Android でデモC・D が使う方式）</h2>
+    <p>model-viewer を使わず、three.js で直接 WebXR を動かします。床を映すと白い輪が出て、タップでその場所に固定します。</p>
+    <div class="test">
+      <button class="btn" id="own-c">3-A　デモCの街灯を自作 AR で開く</button>
+      <button class="btn" id="own-d">3-B　デモDの「だんだん」と白鳥を自作 AR で開く</button>
+      <p class="q">開いてすぐ目の前に出る → 床が見つかると白い輪の上に移る → タップで固定、なら OK</p>
+    </div>
+    <div class="log" id="own-log">（ここに状態が出ます）</div>
+  </section>
+
+  <section class="board">
     <h2>結果を伝えるときは</h2>
     <ul>
       <li>0 の黒い枠の内容（スクショでOK）</li>
-      <li>1-A〜1-D・2-A それぞれ: <strong>出た / カメラは出たがモデルが出ない / すぐ戻った / 何も起きない / エラー（文言）</strong></li>
+      <li>1-A〜1-D・2-A・3-A・3-B それぞれ: <strong>出た / カメラは出たがモデルが出ない / すぐ戻った / 何も起きない / エラー（文言）</strong></li>
     </ul>
   </section>
 </div>
@@ -146,6 +164,27 @@
     else add('この端末・ブラウザでは WebXR の AR が使えません');
   });
 })();
+</script>
+<script type="module">
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { isXRSupported, startFloorAR } from '../lib/xr-place.js';
+const log = document.getElementById('own-log');
+const add = (t) => { log.textContent = (log.textContent.startsWith('（') ? '' : log.textContent + '\n') + new Date().toLocaleTimeString() + ' ' + t; };
+const supported = await isXRSupported();
+add('WebXR の AR: ' + (supported ? '使える' : '使えない'));
+const models = {};
+const loader = new GLTFLoader();
+for (const [key, url] of [['c', '../assets/models/monument.glb'], ['d', '../assets/models/dandan-swan.glb']]) {
+  loader.loadAsync(url).then((g) => { models[key] = g.scene; add(url.split('/').pop() + ' 読み込み OK'); })
+    .catch((e) => add(url.split('/').pop() + ' 読み込み失敗: ' + e.message));
+}
+for (const [id, key, dist] of [['own-c', 'c', 3], ['own-d', 'd', 5]]) {
+  document.getElementById(id).addEventListener('click', () => {
+    if (!supported) return add('この端末・ブラウザでは WebXR の AR が使えません');
+    if (!models[key]) return add('まだ読み込み中です。少し待ってから押してください');
+    startFloorAR({ object: models[key], firstDistance: dist, log: add }).catch((e) => add('エラー: ' + e.message));
+  });
+}
 </script>
 </body>
 </html>

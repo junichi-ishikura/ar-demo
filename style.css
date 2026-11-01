@@ -296,3 +296,28 @@ model-viewer .ar-button:active { transform: translateX(-50%) translate(4px,4px);
 @media (min-width: 720px) {
   body { font-size: 19px; }
 }
+
+/* バージョン番号（右下に小さく。新しい版を読み込めているかの確認用） */
+.app-version {
+  position: fixed; right: 6px; bottom: calc(4px + env(safe-area-inset-bottom)); z-index: 9999;
+  font: 600 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: #fff; background: rgba(20,20,20,.6); padding: 1px 6px; border-radius: 4px; pointer-events: none;
+}
+@media print { .app-version { display: none; } }
+
+/* 自作 WebXR（lib/xr-place.js）の画面 */
+.xr-canvas { display: none; }
+.xr-overlay { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+.xr-overlay > * { pointer-events: auto; }
+.xr-close {
+  position: absolute; left: 10px; top: max(10px, env(safe-area-inset-top));
+  min-height: 48px; padding: 6px 14px; font: inherit; font-size: 1rem; font-weight: 800; box-shadow: 3px 3px 0 var(--ink);
+}
+.xr-hint {
+  position: absolute; left: 12px; right: 12px; bottom: calc(28px + env(safe-area-inset-bottom));
+  background: rgba(20,20,20,.78); color: #fff; font-weight: 800; text-align: center;
+  padding: 10px 14px; border-radius: var(--radius); pointer-events: none;
+}
+.xr-hint[hidden] { display: none; }
+.xr-ver { position: absolute; right: 6px; bottom: calc(4px + env(safe-area-inset-bottom));
+  font: 600 11px/1.4 ui-monospace, Menlo, monospace; color: #fff; background: rgba(20,20,20,.6); padding: 1px 6px; border-radius: 4px; pointer-events: none; }
