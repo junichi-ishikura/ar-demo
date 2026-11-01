@@ -6,13 +6,6 @@
 <title>デモD用 AR ファイルを作る</title>
 <link rel="stylesheet" href="../style.css">
 <script src="../config.js"></script>
-<!-- photo/index.html と同じ three.js 0.160.0 -->
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-} }
-</script>
 <style>
   .log { background: #141414; color: #f7c600; font-family: ui-monospace, Menlo, monospace; font-size: .9rem;
          padding: 12px; border-radius: var(--radius); white-space: pre-wrap; min-height: 6em; }
@@ -36,6 +29,13 @@
   <div class="log" id="log">準備中…</div>
   <div class="dl board" id="dl" hidden><h2>ダウンロード</h2></div>
 </div>
+<!-- photo/index.html と同じ three.js 0.160.0 -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <script type="module">
 import * as THREE from 'three';
 import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';

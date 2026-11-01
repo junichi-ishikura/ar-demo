@@ -6,8 +6,6 @@
 <title>デモD: 床に並べて記念撮影</title>
 <link rel="stylesheet" href="../style.css">
 <script src="../config.js"></script>
-<!-- model-viewer 4.3.1（デモCと同じ。latest にしない） -->
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
 <!-- three.js 0.160.0（モデルを並べる・撮影モードの3D表示。バージョン固定） -->
 <script type="importmap">
 { "imports": {
@@ -15,6 +13,9 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 } }
 </script>
+<!-- model-viewer 4.3.1（デモCと同じ。latest にしない） -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+<script src="../version.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -35,7 +36,7 @@
     <h2>① ARで床に置く</h2>
     <model-viewer id="mv" style="height:44vh;min-height:300px"
       alt="床に置く3Dモデル"
-      ar ar-modes="scene-viewer webxr quick-look"
+      ar ar-modes="scene-viewer quick-look"
       ar-scale="fixed" ar-placement="floor"
       camera-controls touch-action="pan-y"
       camera-orbit="0deg 80deg auto"
@@ -48,7 +49,7 @@
     <p class="device" id="mv-status" style="margin-top:12px">3Dモデルを読み込み中…（はじめは数秒かかります）</p>
     <ul>
       <li>床を映すと、<strong>実物大</strong>で床に立ちます。全体の横幅は <strong>約4.7m</strong> と大きいので、<strong>3〜4m 下がって、少し前（遠く）の床</strong>を映してください</li>
-      <li><strong>Android</strong> は Google の「Scene Viewer」が開きます。床を映して<strong>スマホをゆっくり左右に動かす</strong>と床が見つかり、モデルが出ます</li>
+      <li><strong>Android</strong>: 床を映して<strong>スマホをゆっくり左右に動かす</strong>と白い輪が出ます。<strong>置きたい場所をタップ</strong>して固定（もう一度タップで置き直し）</li>
       <li><strong>iPhone</strong>: AR画面の下にある <strong>白い丸ボタン（シャッター）</strong>で写真が撮れます（「写真」アプリに保存）</li>
       <li><strong>Android</strong>: 写真ボタンは出ません。<strong>電源ボタン＋音量下ボタン</strong>でスクリーンショット</li>
     </ul>
@@ -106,6 +107,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { buildGroup, toGlbUrl } from './scene.js';
+import { isXRSupported, startFloorAR } from '../lib/xr-place.js';
 
 const C = CONFIG.photoDemo;
 const P = C.photo || {};
@@ -137,6 +139,14 @@ function getGroup(onProgress) {
 }
 const exists = (url) => url ? fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false) : Promise.resolve(false);
 
+// Android で WebXR が使えるときは、model-viewer ではなく自作の AR（lib/xr-place.js）で開く
+//   （Pixel で model-viewer の WebXR にモデルが出ず、Scene Viewer も起動しなかったため）
+let useXR = false;
+if (isAndroid) isXRSupported().then((ok) => {
+  useXR = ok;
+  if (ok) getGroup().catch(() => {});   // ボタンを押してすぐ AR に入れるよう、先に読み込んでおく
+});
+
 let mvReady = false;
 (async () => {
   try {
@@ -158,8 +168,8 @@ mv.addEventListener('load', () => {
   mvReady = true;
   // model-viewer が「この端末で使えるAR」を判定し終わるのを少し待ってから表示
   setTimeout(() => {
-    mvStatus.innerHTML = mv.canActivateAR
-      ? ok(isIOS ? '✔ 上のボタンで AR Quick Look が開きます' : '✔ 上のボタンで AR が開きます')
+    mvStatus.innerHTML = useXR ? ok('✔ 上のボタンで AR が開きます（Chrome の中で表示）')
+      : mv.canActivateAR ? ok(isIOS ? '✔ 上のボタンで AR Quick Look が開きます' : '✔ 上のボタンで AR が開きます')
       : arUnavailableMessage();
   }, 300);
 });
@@ -175,6 +185,14 @@ function arUnavailableMessage() {
 }
 
 document.getElementById('ar-btn').addEventListener('click', () => {
+  if (useXR) {
+    if (!group) { mvStatus.innerHTML = ok('3Dモデルを読み込み中です。少し待ってからもう一度押してください'); return; }
+    mvStatus.innerHTML = ok('AR を起動中…');
+    startFloorAR({ object: group, firstDistance: 5, log: (t) => console.log('[AR]', t) })
+      .then(() => { mvStatus.innerHTML = ok('✔ 上のボタンで AR が開きます（Chrome の中で表示）'); })
+      .catch((e) => { mvStatus.innerHTML = ng('✕ ARを起動できませんでした（' + e.message + '）。') + ' ②撮影モードを使ってください。'; });
+    return;
+  }
   if (!mvReady) { mvStatus.innerHTML = ok('3Dモデルを読み込み中です。少し待ってからもう一度押してください'); return; }
   if (mv.canActivateAR) mv.activateAR();
   else mvStatus.innerHTML = arUnavailableMessage();
@@ -265,6 +283,7 @@ shootBtn.addEventListener('click', async () => {
   }
   const first = !renderer;
   if (first) setupThree();
+  else if (group.parent !== stage) stage.add(group);   // AR で使ったあとは戻しておく
   resize();
   if (first) resetStage();
   running = true; loop();

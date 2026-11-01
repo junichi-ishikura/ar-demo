@@ -6,8 +6,16 @@
 <title>デモC: 床に等身大で置く</title>
 <link rel="stylesheet" href="../style.css">
 <script src="../config.js"></script>
+<!-- three.js 0.160.0（Android 用の自作 AR。lib/xr-place.js） -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <!-- model-viewer 4.3.1（バージョン固定。latest にしない） -->
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+<script src="../version.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -36,15 +44,16 @@
   <model-viewer id="mv"
     src="" ios-src=""
     alt="床に置く3Dモデル"
-    ar ar-modes="webxr scene-viewer quick-look"
+    ar ar-modes="scene-viewer quick-look"
     ar-scale="fixed" ar-placement="floor"
     camera-controls touch-action="pan-y"
     shadow-intensity="1" exposure="1"
     loading="eager" reveal="auto">
-    <button slot="ar-button" class="ar-button" id="ar-btn">▶ ARで床に置く</button>
+    <span slot="ar-button" hidden></span>
     <div slot="poster" id="poster-slot"></div>
   </model-viewer>
-  <p class="device" id="ar-note"></p>
+  <button class="btn red block" id="ar-btn">▶ ARで床に置く</button>
+  <p class="device" id="ar-note" style="margin-top:12px"></p>
 
   <section class="board">
     <h2>これは何？</h2>
@@ -100,7 +109,7 @@
       } else if (isIOS) {
         note.innerHTML = '<span class="ok">✔ iPhone: AR Quick Look で開きます</span>';
       } else if (isAndroid) {
-        note.innerHTML = '<span class="ok">✔ Android: Scene Viewer / WebXR で開きます</span>';
+        note.innerHTML = '<span class="ok">✔ Android: ボタンで AR が開きます</span>';
       } else {
         note.innerHTML = '<span class="ng">PC では AR に入れません。</span> スマホでこのページを開いてください（3Dは指やマウスで回せます）。';
       }
@@ -116,7 +125,30 @@
   mv.addEventListener('error', (e) => {
     note.innerHTML = '<span class="ng">✕ 3Dモデルを読み込めませんでした。</span> config.js の modelGlb のパスを確認してください。';
   });
+
+  // ARボタン: Android（WebXR 対応）は自作の AR、それ以外は model-viewer（iPhone は AR Quick Look）
+  document.getElementById('ar-btn').addEventListener('click', () => {
+    if (window.planeXR && window.planeXR.ready) return window.planeXR.start();
+    if (mv.canActivateAR) return mv.activateAR();
+    note.innerHTML = isIOS || isAndroid
+      ? '<span class="ng">✕ この画面では AR を開けません。</span> iPhone は Safari、Android は Chrome で開いてください（LINE などのアプリ内ブラウザでは開けません）。'
+      : '<span class="ng">PC では AR に入れません。</span> スマホでこのページを開いてください。';
+  });
 })();
+</script>
+<script type="module">
+// Android で WebXR が使えるときは、model-viewer ではなく自作の AR で開く
+//   （Pixel で model-viewer の WebXR にモデルが出ず、Scene Viewer も起動しなかったため）
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { isXRSupported, startFloorAR } from '../lib/xr-place.js';
+if (/Android/.test(navigator.userAgent) && await isXRSupported()) {
+  const gltf = await new GLTFLoader().loadAsync(CONFIG.planeDemo.modelGlb);
+  window.planeXR = {
+    ready: true,
+    start: () => startFloorAR({ object: gltf.scene, firstDistance: 3, log: (t) => console.log('[AR]', t) })
+      .catch((e) => { document.getElementById('ar-note').innerHTML = '<span class="ng">✕ ARを起動できませんでした（' + e.message + '）</span>'; }),
+  };
+}
 </script>
 </body>
 </html>
