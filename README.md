@@ -239,6 +239,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 ├── plane/index.html    デモC
 ├── photo/              デモD index.html / scene.js（モデルを並べる・glb にまとめる）。AR用まとめファイルは tools/make-photo-ar.html で作る
 ├── print/index.html    印刷用（A4 × 3）
+├── check/index.html    AR 診断ページ（Scene Viewer / WebXR を個別に試す。Android で出ないときに使う）
 ├── assets/             models(glb+usdz) / audio / video / images / markers / qr / CREDITS.md
 └── tools/              make-markers.mjs / make-qr.mjs / make-video.mjs / make-placeholders.mjs
                         make-voice.sh / make-voice.ps1 / usdz-convert.html
