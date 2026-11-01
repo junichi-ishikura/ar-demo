@@ -6,7 +6,7 @@
 <title>デモC: 床に等身大で置く</title>
 <link rel="stylesheet" href="../style.css">
 <script src="../config.js"></script>
-<!-- three.js 0.160.0（Android 用の自作 AR。lib/xr-place.js） -->
+<!-- three.js 0.160.0（Android 用の自作 AR。lib/xr-place.js。Android で WebXR が使えるときだけ読み込まれる） -->
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -139,9 +139,15 @@
 <script type="module">
 // Android で WebXR が使えるときは、model-viewer ではなく自作の AR で開く
 //   （Pixel で model-viewer の WebXR にモデルが出ず、Scene Viewer も起動しなかったため）
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { isXRSupported, startFloorAR } from '../lib/xr-place.js';
-if (/Android/.test(navigator.userAgent) && await isXRSupported()) {
+//   three.js はこのときだけ読み込む（iPhone などでは読み込まない）
+const xrOK = async () => {
+  try { return !!(navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')); } catch (e) { return false; }
+};
+if (/Android/.test(navigator.userAgent) && await xrOK()) {
+  const [{ GLTFLoader }, { startFloorAR }] = await Promise.all([
+    import('three/addons/loaders/GLTFLoader.js'),
+    import('../lib/xr-place.js'),
+  ]);
   const gltf = await new GLTFLoader().loadAsync(CONFIG.planeDemo.modelGlb);
   window.planeXR = {
     ready: true,
