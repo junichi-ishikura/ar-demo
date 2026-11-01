@@ -33,17 +33,19 @@
   <!-- 1) 本物の床に置く（デモCと同じしくみ） -->
   <section class="board">
     <h2>① ARで床に置く</h2>
-    <model-viewer id="mv"
+    <model-viewer id="mv" style="height:44vh;min-height:300px"
       alt="床に置く3Dモデル"
-      ar ar-modes="webxr quick-look"
+      ar ar-modes="webxr scene-viewer quick-look"
       ar-scale="fixed" ar-placement="floor"
       camera-controls touch-action="pan-y"
       camera-orbit="0deg 80deg auto"
       shadow-intensity="1" exposure="1">
-      <button slot="ar-button" class="ar-button" id="ar-btn">▶ ARで床に置く</button>
+      <!-- model-viewer 内のARボタンは「使えるときだけ」出て、使えないと黙って消えるので使わない。下に常に出すボタンを置く -->
+      <span slot="ar-button" hidden></span>
       <div slot="progress-bar"></div>
     </model-viewer>
-    <p class="device" id="mv-status">3Dモデルを読み込み中…（はじめは数秒かかります）</p>
+    <button class="btn red block" id="ar-btn">▶ ARで床に置く</button>
+    <p class="device" id="mv-status" style="margin-top:12px">3Dモデルを読み込み中…（はじめは数秒かかります）</p>
     <ul>
       <li>床を映すと、<strong>実物大</strong>で床に立ちます（全体の横幅は 4m くらい。少し下がって映してください）</li>
       <li><strong>iPhone</strong>: AR画面の下にある <strong>白い丸ボタン（シャッター）</strong>で写真が撮れます（「写真」アプリに保存）</li>
@@ -59,7 +61,7 @@
       <li>床にピタッと固定はされません（画面に重ねて表示）。<strong>指でずらして</strong>床に置いたように合わせます</li>
       <li>1本指: 動かす　/　2本指: 大きさ・向き</li>
     </ul>
-    <p style="margin-top:12px"><button class="btn red block" id="shoot-btn" disabled>📷 撮影モードをひらく</button></p>
+    <p style="margin-top:12px"><button class="btn red block" id="shoot-btn">📷 撮影モードをひらく</button></p>
   </section>
 
   <section class="board">
@@ -114,28 +116,72 @@ const mv = document.getElementById('mv');
 const mvStatus = document.getElementById('mv-status');
 const shootBtn = document.getElementById('shoot-btn');
 
+const ua = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(ua);
+const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome|Line|Instagram|FBAN|FBAV/.test(ua);
+const ng = (t) => '<span class="ng">' + t + '</span>';
+const ok = (t) => '<span class="ok">' + t + '</span>';
+
 // ---------------------------------------------------------------
-// モデルを読み込んで並べる → ① model-viewer 用に 1つの glb にまとめる
+// ① ARで床に置く
+//   まとめ済みの dandan-swan.glb / .usdz があればそれを使う（Android の Scene Viewer・iPhone の Quick Look が確実に開ける）
+//   無ければ、ページの中でモデルを並べてまとめる（このときは Scene Viewer が使えない）
 // ---------------------------------------------------------------
-let group;
-try {
-  group = await buildGroup(C.models || [], (n, all) => { mvStatus.textContent = `3Dモデルを読み込み中… ${n} / ${all}`; });
-  mv.src = await toGlbUrl(group);   // iPhone 用の usdz は model-viewer がその場で作る（ios-src なし）
-  shootBtn.disabled = false;
-  const ua = navigator.userAgent;
-  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isAndroid = /Android/.test(ua);
-  mvStatus.innerHTML = isIOS ? '<span class="ok">✔ iPhone: AR Quick Look で開きます</span>'
-    : isAndroid ? '<span class="ok">✔ Android: ARで開きます（ARCore対応機種）</span>'
-    : '<span class="ng">PC では AR に入れません。</span> スマホで開いてください（3Dは指やマウスで回せます）';
-} catch (e) {
-  console.error(e);
-  mvStatus.innerHTML = '<span class="ng">✕ ' + e.message + '</span><br>config.js の photoDemo.models のパスを確認してください。';
+let group = null;            // three.js の並べたモデル（撮影モードで使う。必要になったら作る）
+let groupPromise = null;
+function getGroup(onProgress) {
+  if (!groupPromise) groupPromise = buildGroup(C.models || [], onProgress).then((g) => (group = g));
+  return groupPromise;
 }
+const exists = (url) => url ? fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false) : Promise.resolve(false);
+
+let mvReady = false;
+(async () => {
+  try {
+    const [hasGlb, hasUsdz] = await Promise.all([exists(C.arGlb), exists(C.arUsdz)]);
+    if (hasUsdz) mv.setAttribute('ios-src', C.arUsdz);
+    if (hasGlb) {
+      mv.src = C.arGlb;
+    } else {
+      mv.setAttribute('ar-modes', 'webxr quick-look');   // ページ内で作ったファイルは Scene Viewer に渡せない
+      await getGroup((n, all) => { mvStatus.textContent = `3Dモデルを読み込み中… ${n} / ${all}`; });
+      mv.src = await toGlbUrl(group);
+    }
+  } catch (e) {
+    console.error(e);
+    mvStatus.innerHTML = ng('✕ ' + e.message) + '<br>config.js の photoDemo のパスを確認してください。';
+  }
+})();
+mv.addEventListener('load', () => {
+  mvReady = true;
+  // model-viewer が「この端末で使えるAR」を判定し終わるのを少し待ってから表示
+  setTimeout(() => {
+    mvStatus.innerHTML = mv.canActivateAR
+      ? ok(isIOS ? '✔ 上のボタンで AR Quick Look が開きます' : '✔ 上のボタンで AR が開きます')
+      : arUnavailableMessage();
+  }, 300);
+});
+mv.addEventListener('error', () => {
+  mvStatus.innerHTML = ng('✕ 3Dモデルを読み込めませんでした。') + ' config.js の arGlb / models のパスを確認してください。';
+});
+
+function arUnavailableMessage() {
+  if (!isIOS && !isAndroid) return ng('PC では AR に入れません。') + ' スマホでこのページを開いてください（上の3Dは指やマウスで回せます）。②撮影モードはPCのカメラでも試せます。';
+  if (isIOS && !isSafari) return ng('✕ この画面では AR を開けません。') + ' <strong>Safari</strong> で開き直してください（LINE などのアプリ内ブラウザや Chrome では開けません）。右上の「…」や共有ボタンから「Safariで開く」。';
+  if (isIOS) return ng('✕ この iPhone では AR を開けませんでした。') + ' ②撮影モードを使ってください。';
+  return ng('✕ この機種・ブラウザでは AR を開けません。') + ' <strong>Chrome</strong> で開き直すか（LINE などのアプリ内ブラウザでは開けません）、Google Play 開発者サービス（AR）を入れてください。だめなら②撮影モードを使ってください。';
+}
+
+document.getElementById('ar-btn').addEventListener('click', () => {
+  if (!mvReady) { mvStatus.innerHTML = ok('3Dモデルを読み込み中です。少し待ってからもう一度押してください'); return; }
+  if (mv.canActivateAR) mv.activateAR();
+  else mvStatus.innerHTML = arUnavailableMessage();
+});
 mv.addEventListener('ar-status', (e) => {
   const s = e.detail.status;
-  if (s === 'failed') mvStatus.innerHTML = '<span class="ng">✕ ARを起動できませんでした。</span> この端末では②撮影モードを使ってください。';
-  if (s === 'session-started') mvStatus.innerHTML = '<span class="ok">AR起動中… 床を映してください</span>';
+  if (s === 'failed') mvStatus.innerHTML = ng('✕ ARを起動できませんでした。') + ' この端末では②撮影モードを使ってください。';
+  if (s === 'session-started') mvStatus.innerHTML = ok('AR起動中… 床を映してください');
 });
 
 // ---------------------------------------------------------------
@@ -211,6 +257,11 @@ function loop() {
 shootBtn.addEventListener('click', async () => {
   shoot.hidden = false;
   document.body.style.overflow = 'hidden';
+  if (!group) {
+    hint.textContent = '3Dモデルを読み込み中…';
+    try { await getGroup((n, all) => { hint.textContent = `3Dモデルを読み込み中… ${n} / ${all}`; }); }
+    catch (e) { hint.textContent = '✕ ' + e.message; return; }
+  }
   const first = !renderer;
   if (first) setupThree();
   resize();

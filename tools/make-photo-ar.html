@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デモD用 AR ファイルを作る</title>
+<link rel="stylesheet" href="../style.css">
+<script src="../config.js"></script>
+<!-- photo/index.html と同じ three.js 0.160.0 -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+  .log { background: #141414; color: #f7c600; font-family: ui-monospace, Menlo, monospace; font-size: .9rem;
+         padding: 12px; border-radius: var(--radius); white-space: pre-wrap; min-height: 6em; }
+  .dl a { display: block; margin: 8px 0; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="sign-head">
+    <p class="eyebrow">[人手] 作業用ツール</p>
+    <h1>デモD の AR ファイルを作る</h1>
+  </header>
+  <section class="warn">
+    <h2>使い方（config.js の photoDemo.models を変えたら行う）</h2>
+    <ul>
+      <li><code>npx serve .</code> などで <strong>http 経由</strong>で開く</li>
+      <li>自動で並べて書き出し → 下のリンクから 2 つのファイルを保存</li>
+      <li>保存したファイルを、<code>config.js</code> の <code>arGlb</code> / <code>arUsdz</code> と同じ名前で <code>assets/models/</code> に置く</li>
+    </ul>
+  </section>
+  <div class="log" id="log">準備中…</div>
+  <div class="dl board" id="dl" hidden><h2>ダウンロード</h2></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
+import { buildGroup, toGlbUrl } from '../photo/scene.js';
+
+const C = CONFIG.photoDemo;
+const log = (t) => { document.getElementById('log').textContent += '\n' + t; };
+// config.js のパスは photo/ から見た相対パス → このページ（tools/）から見ても同じ「../assets/〜」で読める
+try {
+  log('モデルを読み込み中…');
+  const group = await buildGroup(C.models);
+  const size = new THREE.Box3().setFromObject(group).getSize(new THREE.Vector3());
+  log(`並べた全体の大きさ: 幅 ${size.x.toFixed(2)}m × 高さ ${size.y.toFixed(2)}m × 奥行き ${size.z.toFixed(2)}m`);
+
+  const glbUrl = await toGlbUrl(group);
+  const glbSize = (await (await fetch(glbUrl)).blob()).size;
+  log(`glb: ${(glbSize / 1e6).toFixed(1)}MB`);
+
+  const usdz = await new USDZExporter().parse(group, { quickLookCompatible: true });
+  const usdzUrl = URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' }));
+  log(`usdz: ${(usdz.byteLength / 1e6).toFixed(1)}MB`);
+
+  const dl = document.getElementById('dl');
+  for (const [url, path] of [[glbUrl, C.arGlb], [usdzUrl, C.arUsdz]]) {
+    const a = document.createElement('a');
+    a.href = url; a.download = path.split('/').pop(); a.textContent = '⬇ ' + a.download;
+    dl.appendChild(a);
+  }
+  dl.hidden = false;
+  log('完了');
+  document.title = 'done';
+} catch (e) {
+  log('✕ ' + e.message);
+  document.title = 'error';
+}
+</script>
+</body>
+</html>

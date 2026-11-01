@@ -121,6 +121,12 @@ const CONFIG = {
       },
     ],
 
+    // 「ARで床に置く」で使う、上のモデルを並べて1つにまとめたファイル
+    //   models を変えたら tools/make-photo-ar.html で作り直す（README「デモD」）。
+    //   ファイルが無いときは、ページの中でその場でまとめる（Android の一部機種・iPhone の Chrome などでは AR に入れない）
+    arGlb:  "../assets/models/dandan-swan.glb",   // Android用
+    arUsdz: "../assets/models/dandan-swan.usdz",  // iPhone用
+
     // 撮影モード（ページ内カメラ）の設定
     photo: {
       distance: 0,        // はじめにモデルを置く距離（メートル）。0 なら全体が画面に入る距離に自動で合わせる
