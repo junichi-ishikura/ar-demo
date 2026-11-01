@@ -137,7 +137,7 @@ node tools/make-qr.mjs https://<ユーザー名>.github.io/<リポジトリ名>/
 | 写真 | iPhone: Quick Look の**白いシャッターボタン**（長押しで動画）／ Android: **スクショ**（電源＋音量下） | **シャッターボタン → 保存**（iPhone は共有シートの「画像を保存」で写真アプリへ） |
 
 - 撮った写真には右下に `photo.stamp` の文字が入ります（`""` で消える）
-- ① は、2つのモデルを並べて 1つにまとめた `dandan-swan.glb`（Android 用・4.4MB）/ `dandan-swan.usdz`（iPhone 用・19MB）を開きます。デモCと同じく Android は WebXR → Scene Viewer、iPhone は AR Quick Look
+- ① は、2つのモデルを並べて 1つにまとめた `dandan-swan.glb`（Android 用・4.4MB）/ `dandan-swan.usdz`（iPhone 用・19MB）を開きます。Android は **Scene Viewer（Google の AR アプリ）を優先**し、使えなければ WebXR、iPhone は AR Quick Look（Pixel の WebXR ではモデルが出ないことがあったため、デモCと順番を変えている）
 - 「▶ ARで床に置く」ボタンは常に表示し、AR が使えない環境（PC、LINE などのアプリ内ブラウザ、iPhone の Chrome、ARCore 非対応機種）では押すと理由と対処が出ます
 - **`config.js` の `photoDemo.models`（大きさ・位置・向き・モデル）を変えたら、`dandan-swan.glb/.usdz` を作り直す**:
   `npx serve .` → `/tools/make-photo-ar.html` を開く → 出てきた 2 つのリンクを保存 → `assets/models/` に上書き。

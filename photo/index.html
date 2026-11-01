@@ -35,7 +35,7 @@
     <h2>① ARで床に置く</h2>
     <model-viewer id="mv" style="height:44vh;min-height:300px"
       alt="床に置く3Dモデル"
-      ar ar-modes="webxr scene-viewer quick-look"
+      ar ar-modes="scene-viewer webxr quick-look"
       ar-scale="fixed" ar-placement="floor"
       camera-controls touch-action="pan-y"
       camera-orbit="0deg 80deg auto"
@@ -47,7 +47,8 @@
     <button class="btn red block" id="ar-btn">▶ ARで床に置く</button>
     <p class="device" id="mv-status" style="margin-top:12px">3Dモデルを読み込み中…（はじめは数秒かかります）</p>
     <ul>
-      <li>床を映すと、<strong>実物大</strong>で床に立ちます（全体の横幅は 4m くらい。少し下がって映してください）</li>
+      <li>床を映すと、<strong>実物大</strong>で床に立ちます。全体の横幅は <strong>約4.7m</strong> と大きいので、<strong>3〜4m 下がって、少し前（遠く）の床</strong>を映してください</li>
+      <li><strong>Android</strong> は Google の「Scene Viewer」が開きます。床を映して<strong>スマホをゆっくり左右に動かす</strong>と床が見つかり、モデルが出ます</li>
       <li><strong>iPhone</strong>: AR画面の下にある <strong>白い丸ボタン（シャッター）</strong>で写真が撮れます（「写真」アプリに保存）</li>
       <li><strong>Android</strong>: 写真ボタンは出ません。<strong>電源ボタン＋音量下ボタン</strong>でスクリーンショット</li>
     </ul>
