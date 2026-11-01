@@ -91,9 +91,17 @@
     <h2>3. 自作の AR（Android でデモC・D が使う方式）</h2>
     <p>model-viewer を使わず、three.js で直接 WebXR を動かします。床を映すと白い輪が出て、タップでその場所に固定します。</p>
     <div class="test">
-      <button class="btn" id="own-c">3-A　デモCの街灯を自作 AR で開く</button>
-      <button class="btn" id="own-d">3-B　デモDの「だんだん」と白鳥を自作 AR で開く</button>
+      <button class="btn" id="own-c">3-A　デモCの街灯</button>
+      <button class="btn" id="own-d">3-B　デモDの「だんだん」と白鳥</button>
       <p class="q">開いてすぐ目の前に出る → 床が見つかると白い輪の上に移る → タップで固定、なら OK</p>
+    </div>
+    <p style="font-weight:800;margin:4px 0">↓ 3-A・3-B で何も見えないとき（原因の切り分け）</p>
+    <div class="test">
+      <button class="btn white" id="own-cube">3-C　ピンクの箱だけ（いちばん単純な3D）</button>
+      <button class="btn white" id="own-cube-layers">3-D　ピンクの箱（新しい描画方式 WebXR Layers を使う）</button>
+      <button class="btn white" id="own-cube-nooverlay">3-E　ピンクの箱（ボタンや案内を重ねない）</button>
+      <p class="q">目の前 1.2m の高さ（スマホと同じ高さ）にピンクの箱が出れば OK。3-E は画面にボタンが出ないので、<strong>Android の戻る操作</strong>で終了</p>
+      <p class="q">それぞれ<strong>ピンクの箱・白い輪・下の案内文・左上の「✕ とじる」</strong>が見えたかどうかも教えてください</p>
     </div>
     <div class="log" id="own-log">（ここに状態が出ます）</div>
   </section>
@@ -102,7 +110,7 @@
     <h2>結果を伝えるときは</h2>
     <ul>
       <li>0 の黒い枠の内容（スクショでOK）</li>
-      <li>1-A〜1-D・2-A・3-A・3-B それぞれ: <strong>出た / カメラは出たがモデルが出ない / すぐ戻った / 何も起きない / エラー（文言）</strong></li>
+      <li>1-A〜1-D・2-A・3-A〜3-E それぞれ: <strong>出た / カメラは出たがモデルが出ない / すぐ戻った / 何も起きない / エラー（文言）</strong></li>
     </ul>
   </section>
 </div>
@@ -140,6 +148,9 @@
     '端末: ' + navigator.userAgent,
     'https: ' + (window.isSecureContext ? 'はい' : 'いいえ（AR が使えません）'),
     'WebXR(navigator.xr): ' + (navigator.xr ? 'あり' : 'なし'),
+    'WebXR Layers: ' + (window.XRRenderState && 'layers' in XRRenderState.prototype ? 'あり' : 'なし'),
+    'GPU: ' + (function () { try { const gl = document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl');
+      const ext = gl.getExtension('WEBGL_debug_renderer_info'); return (gl instanceof WebGL2RenderingContext ? 'WebGL2 ' : 'WebGL1 ') + (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) { return '不明'; } })(),
   ];
   env.textContent = lines.join('\n') + '\nWebXR の AR: 調べています…';
   if (navigator.xr && navigator.xr.isSessionSupported) {
@@ -178,11 +189,19 @@ for (const [key, url] of [['c', '../assets/models/monument.glb'], ['d', '../asse
   loader.loadAsync(url).then((g) => { models[key] = g.scene; add(url.split('/').pop() + ' 読み込み OK'); })
     .catch((e) => add(url.split('/').pop() + ' 読み込み失敗: ' + e.message));
 }
-for (const [id, key, dist] of [['own-c', 'c', 3], ['own-d', 'd', 5]]) {
+const tests = [
+  ['own-c', 'c', { firstDistance: 3 }],
+  ['own-d', 'd', { firstDistance: 5 }],
+  ['own-cube', null, { testCube: true }],
+  ['own-cube-layers', null, { testCube: true, layers: true }],
+  ['own-cube-nooverlay', null, { testCube: true, overlay: false }],
+];
+for (const [id, key, opts] of tests) {
   document.getElementById(id).addEventListener('click', () => {
     if (!supported) return add('この端末・ブラウザでは WebXR の AR が使えません');
-    if (!models[key]) return add('まだ読み込み中です。少し待ってから押してください');
-    startFloorAR({ object: models[key], firstDistance: dist, log: add }).catch((e) => add('エラー: ' + e.message));
+    if (key && !models[key]) return add('まだ読み込み中です。少し待ってから押してください');
+    add('── ' + document.getElementById(id).textContent.trim());
+    startFloorAR({ object: key ? models[key] : null, log: add, ...opts }).catch((e) => add('エラー: ' + e.message));
   });
 }
 </script>
