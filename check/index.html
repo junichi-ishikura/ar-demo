@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AR 診断ページ</title>
+<link rel="stylesheet" href="../style.css">
+<!-- デモC・D と同じ model-viewer 4.3.1 -->
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+<style>
+  .test { display: grid; gap: 8px; margin: 12px 0 18px; }
+  .test .btn { font-size: 1.05rem; min-height: 56px; padding: 8px 12px; text-align: center; }
+  .test .q { font-size: .9rem; color: var(--muted); margin: 0; }
+  .env { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; background: #141414; color: #f7c600;
+         padding: 10px 12px; border-radius: var(--radius); white-space: pre-wrap; word-break: break-all; }
+  model-viewer.small { height: 220px; min-height: 0; margin: 0; }
+  .log { font-family: ui-monospace, Menlo, monospace; font-size: .85rem; background: #fff; border: 3px solid var(--ink);
+         padding: 8px 10px; min-height: 3em; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud-top" style="position:static;padding:12px 0 0">
+    <a class="btn white back" href="../">‹ もどる</a>
+    <span class="name">AR 診断</span>
+  </div>
+
+  <header class="sign-head">
+    <p class="eyebrow">うまく表示されないときに</p>
+    <h1>AR 診断ページ</h1>
+  </header>
+
+  <section class="warn">
+    <h2>使い方</h2>
+    <ul>
+      <li>上から順に試して、<strong>どこまで動いたか</strong>を記録してください</li>
+      <li>ボタンは <strong>このページの中でタップ</strong>してください（URL をコピーして開くと動きません）</li>
+      <li>AR の画面から戻るときは、左上の「×」か戻るボタン</li>
+    </ul>
+  </section>
+
+  <section class="board">
+    <h2>0. この端末の情報</h2>
+    <div class="env" id="env">調べています…</div>
+    <p style="margin-top:10px"><a class="btn white block" href="market://details?id=com.google.ar.core">Play ストアで「Google Play 開発者サービス（AR）」を開く</a></p>
+    <p class="q">「更新」や「インストール」が出たら実行してから、もう一度このページを開き直す</p>
+  </section>
+
+  <section class="board">
+    <h2>1. Scene Viewer（Google の AR アプリ）</h2>
+    <p>3Dモデルを全画面で見せる、Android 標準の仕組みです。</p>
+
+    <div class="test">
+      <a class="btn green" id="sv-3d">1-A　3D表示だけ（ARなし）で開く</a>
+      <p class="q">白っぽい背景に Google のサンプル（アボカド）が出て、指で回せれば OK</p>
+    </div>
+    <div class="test">
+      <a class="btn green" id="sv-ar-sample">1-B　Google のサンプルを AR で開く</a>
+      <p class="q">カメラ映像が出る →「スマホを動かして」の案内 → 床にアボカドが出れば OK</p>
+    </div>
+    <div class="test">
+      <a class="btn green" id="sv-ar-monument">1-C　デモCの街灯を AR で開く</a>
+    </div>
+    <div class="test">
+      <a class="btn green" id="sv-ar-dandan">1-D　デモDの「だんだん」と白鳥を AR で開く</a>
+    </div>
+  </section>
+
+  <section class="board">
+    <h2>2. WebXR（Chrome の中で AR）</h2>
+    <p>Scene Viewer を使わず、Chrome の中で AR にする方式です。</p>
+    <model-viewer class="small" id="mv-xr" loading="eager" ar ar-modes="webxr" ar-placement="floor" ar-scale="fixed"
+      camera-controls touch-action="pan-y" alt="WebXR テスト">
+      <span slot="ar-button" hidden></span>
+    </model-viewer>
+    <div class="test">
+      <button class="btn" id="xr-btn">2-A　デモCの街灯を WebXR で開く</button>
+      <p class="q">カメラ映像が出て、少し待つと街灯が出れば OK（スマホをゆっくり動かす）</p>
+    </div>
+    <div class="log" id="xr-log">（ここに状態が出ます）</div>
+  </section>
+
+  <section class="board">
+    <h2>結果を伝えるときは</h2>
+    <ul>
+      <li>0 の黒い枠の内容（スクショでOK）</li>
+      <li>1-A〜1-D・2-A それぞれ: <strong>出た / カメラは出たがモデルが出ない / すぐ戻った / 何も起きない / エラー（文言）</strong></li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function () {
+  const abs = (p) => new URL(p, location.href).href;
+  const SAMPLE = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb';
+  const back = location.href.split('#')[0];
+
+  // Scene Viewer を Android の intent で開くリンク（Google の公式の書き方）
+  function sv(file, mode, title) {
+    const q = 'file=' + encodeURIComponent(file) + '&mode=' + mode + '&title=' + encodeURIComponent(title)
+      + (mode === 'ar_only' ? '&resizable=false' : '');
+    // 3D表示は Google アプリ、AR は「Google Play 開発者サービス（AR）」が担当する
+    const pkg = mode === '3d_only' ? 'com.google.android.googlequicksearchbox' : 'com.google.ar.core';
+    return 'intent://arvr.google.com/scene-viewer/1.0?' + q
+      + '#Intent;scheme=https;package=' + pkg + ';action=android.intent.action.VIEW;'
+      + 'S.browser_fallback_url=' + encodeURIComponent(back + '#fallback-' + mode) + ';end;';
+  }
+  document.getElementById('sv-3d').href = sv(SAMPLE, '3d_only', 'アボカド');
+  document.getElementById('sv-ar-sample').href = sv(SAMPLE, 'ar_only', 'アボカド');
+  document.getElementById('sv-ar-monument').href = sv(abs('../assets/models/monument.glb'), 'ar_only', '街灯');
+  document.getElementById('sv-ar-dandan').href = sv(abs('../assets/models/dandan-swan.glb'), 'ar_only', 'だんだん');
+
+  // Scene Viewer を開けなかったときは、Chrome がこのページ（#fallback-〜）に戻してくる
+  if (location.hash.startsWith('#fallback-')) {
+    alert('Scene Viewer を開けませんでした（' + location.hash.slice(10) + '）。\n「Google Play 開発者サービス（AR）」と「Google」アプリが入っているか確認してください。');
+    history.replaceState(null, '', back);
+  }
+
+  // 端末の情報
+  const env = document.getElementById('env');
+  const lines = [
+    '端末: ' + navigator.userAgent,
+    'https: ' + (window.isSecureContext ? 'はい' : 'いいえ（AR が使えません）'),
+    'WebXR(navigator.xr): ' + (navigator.xr ? 'あり' : 'なし'),
+  ];
+  env.textContent = lines.join('\n') + '\nWebXR の AR: 調べています…';
+  if (navigator.xr && navigator.xr.isSessionSupported) {
+    navigator.xr.isSessionSupported('immersive-ar')
+      .then((ok) => { env.textContent = lines.join('\n') + '\nWebXR の AR: ' + (ok ? '使える' : '使えない'); })
+      .catch((e) => { env.textContent = lines.join('\n') + '\nWebXR の AR: エラー ' + e.message; });
+  } else {
+    env.textContent = lines.join('\n') + '\nWebXR の AR: 使えない';
+  }
+
+  // WebXR テスト
+  const mv = document.getElementById('mv-xr');
+  const log = document.getElementById('xr-log');
+  const add = (t) => { log.textContent = (log.textContent.startsWith('（') ? '' : log.textContent + '\n') + new Date().toLocaleTimeString() + ' ' + t; };
+  mv.src = '../assets/models/monument.glb';
+  mv.addEventListener('load', () => setTimeout(() => add('モデル読み込み OK / AR: ' + (mv.canActivateAR ? '使える' : '使えない')), 300));
+  mv.addEventListener('error', () => add('モデルを読み込めませんでした'));
+  mv.addEventListener('ar-status', (e) => add('ar-status: ' + e.detail.status));
+  mv.addEventListener('ar-tracking', (e) => add('ar-tracking: ' + e.detail.status));
+  document.getElementById('xr-btn').addEventListener('click', () => {
+    if (mv.canActivateAR) mv.activateAR();
+    else add('この端末・ブラウザでは WebXR の AR が使えません');
+  });
+})();
+</script>
+</body>
+</html>
